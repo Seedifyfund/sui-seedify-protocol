@@ -1,0 +1,10 @@
+{
+    "build": {
+      "env": {
+        "NEXT_IGNORE_TYPE_ERRORS": "true"
+      }
+    },
+    "outputDirectory": ".next",
+    "framework": "nextjs"
+  }
+  

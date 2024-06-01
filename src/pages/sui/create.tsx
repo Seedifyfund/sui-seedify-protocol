@@ -31,6 +31,7 @@ import axios from "axios";
 import Sidebar2 from '../../components/sidebar';
 
 const formSchema = z.object({
+  investorName: z.string().min(1, "Investor Name is required"),
   startDate: z.date().nullable(), // allow null but required
   startHour: z.preprocess((val) => Number(val), z.number().min(1).max(12)),
   startMinute: z.preprocess((val) => Number(val), z.number().min(0).max(59)),
@@ -58,6 +59,7 @@ interface FormData {
   amount: number;
   transferPercentage: number;
   coin: string;
+  investorName: string; // Add this field
 }
 
 interface CoinBalance {
@@ -93,9 +95,11 @@ const Create: React.FC = () => {
       receiver: "",
       amount: 1,
       transferPercentage: 0,
-      coin: "", // Add coin to defaultValues
+      coin: "",
+      investorName: "", // Add investorName to defaultValues
     },
   });
+  
   const [digest, setDigest] = useState('');
   const [coins, setCoins] = useState<{ coinType: string, coinObjectId: string, coinName: string, totalBalance: string }[]>([]);
   const [selectedCoin, setSelectedCoin] = useState('');
@@ -347,6 +351,14 @@ const Create: React.FC = () => {
                 <h2 className="text-2xl font-semibold mb-4 text-center">CREATE VESTING</h2>
                 <Form {...formMethods} handleSubmit={handleSubmit} control={control}>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+                  <FormItem>
+      <FormLabel>Investor Name</FormLabel>
+      <FormControl>
+        <Input type="text" className="mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm" />
+      </FormControl>
+      <FormDescription>Enter the investor's name.</FormDescription>
+      <FormMessage />
+    </FormItem>
                     <FormField
                       control={control}
                       name="startDate"

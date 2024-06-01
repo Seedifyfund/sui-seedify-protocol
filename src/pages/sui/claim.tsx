@@ -140,12 +140,10 @@ const Claim: React.FC = () => {
   const calculateClaimableAmount = (wallet: WalletFields): number => {
     const currentTime = Date.now();
     const elapsed = Math.max(currentTime - wallet.start, 0);
-    const elapsedIntervals = Math.floor(elapsed / (wallet.claim_interval * 24 * 60 * 60 * 1000)); // Convert days to milliseconds
-    const totalIntervals = Math.floor(wallet.duration / wallet.claim_interval);
-    const claimablePerInterval = wallet.balance / totalIntervals;
-    const claimable = (claimablePerInterval * elapsedIntervals) - wallet.released;
+    const vestedAmount = linear_vested_amount(wallet.start, wallet.duration * (24 * 60 * 60 * 1000), wallet.balance * 1_000_000_000, wallet.released * 1_000_000_000, currentTime);
+    const claimable = vestedAmount - (wallet.released * 1_000_000_000);
 
-    return Math.max(claimable, 0);
+    return Math.max(claimable, 0) / 1_000_000_000; // Convert back to original units
   };
 
   const linear_vested_amount = (start: number, duration: number, balance: number, already_released: number, timestamp: number): number => {

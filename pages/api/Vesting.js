@@ -1,11 +1,15 @@
 // pages/api/Vesting.js
 import connectDB from '../../lib/db/index';
 import vestingSchema from '../../lib/db/models/Vesting';
+import Cors from 'cors';
+
+// Initialize the cors middleware
 
 const createVesting = async (req, res) => {
     try {
         await connectDB(); // Ensure database connection
         const {
+            investorName,
             startDate,
             startHour,
             startMinute,
@@ -20,6 +24,7 @@ const createVesting = async (req, res) => {
         } = req.body;
 
         const create = await vestingSchema.create({
+            investorName,
             startDate,
             startHour,
             startMinute,
@@ -39,6 +44,9 @@ const createVesting = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
+
 
 const getAllVesting = async (req, res) => {
     try {

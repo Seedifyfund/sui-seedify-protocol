@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const vestingSchema = new mongoose.Schema({
+    investorName:{ type: String, required: true },
     startDate: { type: Date, required: true },
     startHour: { type: Number, required: true },
     startMinute: { type: Number, required: true },

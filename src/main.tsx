@@ -7,6 +7,8 @@ import router from '@/router'
 import '@/index.css'
 import Providers from './context/Providers'
 
+
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <Providers><React.StrictMode>
     <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>

@@ -5,8 +5,6 @@ import { Button } from './custom/button'
 import Nav from './nav'
 import { cn } from '@/lib/utils'
 import { sidelinks } from '@/data/sidelinks'
-import { ConnectButton } from '@mysten/dapp-kit';
-import "@mysten/dapp-kit/dist/index.css";
 interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
   isCollapsed: boolean
   setIsCollapsed: React.Dispatch<React.SetStateAction<boolean>>
@@ -98,7 +96,7 @@ export default function Sidebar2({
         </LayoutHeader>
 
         <div className={`flex justify-center ${isCollapsed ? 'md:hidden' : ''}`}>
-          <ConnectButton />
+          
         </div>
 
         {/* Navigation links */}

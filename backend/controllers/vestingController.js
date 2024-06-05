@@ -1,13 +1,7 @@
-// pages/api/Vesting.js
-import connectDB from '../../lib/db/index';
-import vestingSchema from '../../lib/db/models/Vesting';
-import Cors from 'cors';
-
-// Initialize the cors middleware
+import Vesting from '../models/Vesting.js';
 
 const createVesting = async (req, res) => {
     try {
-        await connectDB(); // Ensure database connection
         const {
             investorName,
             startDate,
@@ -23,7 +17,9 @@ const createVesting = async (req, res) => {
             transferPercentage
         } = req.body;
 
-        const create = await vestingSchema.create({
+        console.log(investorName, startDate, startHour)
+
+        const create = await Vesting.create({
             investorName,
             startDate,
             startHour,
@@ -38,20 +34,16 @@ const createVesting = async (req, res) => {
             transferPercentage,
         });
 
-        res.status(200).json({ message: "createVesting added successfully", create });
+        res.status(200).json({ message: "Vesting created successfully", create });
     } catch (error) {
         console.error("Error in createVesting:", error);
         res.status(500).json({ message: error.message });
     }
 };
 
-
-
-
 const getAllVesting = async (req, res) => {
     try {
-        await connectDB(); // Ensure database connection
-        const allVesting = await vestingSchema.find().lean();
+        const allVesting = await Vesting.find().lean();
         res.status(200).json({ message: "done", allVesting });
     } catch (error) {
         console.error("Error in getAllVesting:", error);
@@ -59,16 +51,4 @@ const getAllVesting = async (req, res) => {
     }
 };
 
-export default async function handler(req, res) {
-    switch (req.method) {
-        case 'POST':
-            await createVesting(req, res);
-            break;
-        case 'GET':
-            await getAllVesting(req, res);
-            break;
-        default:
-            res.setHeader('Allow', ['POST', 'GET']);
-            res.status(405).end(`Method ${req.method} Not Allowed`);
-    }
-}
+export { createVesting, getAllVesting };

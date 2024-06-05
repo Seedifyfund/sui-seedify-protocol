@@ -25,3 +25,5 @@ export const config = defaultWagmiConfig({
     storage: cookieStorage
   }),
 });
+
+// export const p = process.env.NEXT_PUBLIC_PROJECT_ID;

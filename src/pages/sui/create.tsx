@@ -98,6 +98,8 @@ interface CoinMetadata {
 }
 
 const Create: React.FC = () => {
+	const api = "http://localhost:8000/api";
+	// console.log(api)
 	const currentAccount = useCurrentAccount();
 	const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
 	const { control, handleSubmit, ...formMethods } = useForm<FormData>({
@@ -252,7 +254,7 @@ const Create: React.FC = () => {
 			transferPercentage,
 			coin,
 		} = data;
-     console.log(investorName);
+		console.log(investorName);
 		console.log("Form data:", data);
 
 		if (!startDate) {
@@ -372,7 +374,7 @@ const Create: React.FC = () => {
 			try {
 				// await axios.get("/api/Vesting");
 				const response = await axios.post(
-					"/api/Vesting",
+					`${api}/vesting/createVesting`,
 					{
 						...data,
 						digest: result.digest,
@@ -400,7 +402,6 @@ const Create: React.FC = () => {
 			toast.error("Transaction failed.");
 		}
 	};
-
 
 	return (
 		<>
@@ -1018,8 +1019,8 @@ const Create: React.FC = () => {
 										<Button
 											type='submit'
 											className='bg-blue-600 text-white hover:bg-blue-700'
-                      // onClick={handleSubmit}
-                      >
+											// onClick={handleSubmit}
+										>
 											Create Vesting
 										</Button>
 										<div className='mt-4'>

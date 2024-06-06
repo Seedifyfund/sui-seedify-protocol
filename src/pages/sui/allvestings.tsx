@@ -42,7 +42,7 @@ const AllAccounts: React.FC = () => {
   const [addresses, setAddresses] = useState<string[]>([]);
   const currentAccount = useCurrentAccount();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [, setIsAdmin] = useState(false);
 
   useEffect(() => {
 		const checkAdminAccess = async () => {
@@ -227,7 +227,7 @@ const AllAccounts: React.FC = () => {
     start: number,
     duration: number,
     balance: number,
-    already_released: number,
+    _already_released: number,
     timestamp: number
   ): number => {
     if (timestamp < start) return 0;

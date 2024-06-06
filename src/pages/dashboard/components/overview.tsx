@@ -1,8 +1,8 @@
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { curveCardinal } from 'd3-shape';
 
-const cardinal = curveCardinal.tension(0.2);
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+// import { curveCardinal } from 'd3-shape';
+
+// const cardinal = curveCardinal.tension(0.2);
 
 export function Overview({ totalWallets, totalBalance, totalReleased, totalClaimable }: { totalWallets: number, totalBalance: number, totalReleased: number, totalClaimable: number }) {
   const data = [

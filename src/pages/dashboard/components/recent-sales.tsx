@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,

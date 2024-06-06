@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import ErrorBoundary from "../auth/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -88,14 +87,14 @@ interface CoinBalance {
 	lockedBalance: Record<string, string>;
 }
 
-interface CoinMetadata {
-	decimals: number;
-	description: string;
-	iconUrl?: null | string;
-	id?: null | string;
-	name: string;
-	symbol: string;
-}
+// interface CoinMetadata {
+// 	decimals: number;
+// 	description: string;
+// 	iconUrl?: null | string;
+// 	id?: null | string;
+// 	name: string;
+// 	symbol: string;
+// }
 
 const Create: React.FC = () => {
 	const api = "http://localhost:8000/api";
@@ -130,7 +129,7 @@ const Create: React.FC = () => {
 			totalBalance: string;
 		}[]
 	>([]);
-	const [selectedCoin, setSelectedCoin] = useState("");
+	const [, setSelectedCoin] = useState("");
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
@@ -530,7 +529,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='startHour'
-											render={({ field }) => (
+											render={() => (
 												<>
 													<FormField
 														control={control}
@@ -676,7 +675,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='startMinute'
-											render={({ field }) => (
+											render={() => (
 												<FormItem>
 													<FormLabel>
 														Start Minute
@@ -725,7 +724,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='duration'
-											render={({ field }) => (
+											render={() => (
 												<FormItem>
 													<FormLabel>
 														Duration
@@ -812,7 +811,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='claimInterval'
-											render={({ field }) => (
+											render={() => (
 												<FormItem>
 													<FormLabel>
 														Claim Interval
@@ -922,7 +921,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='amount'
-											render={({ field }) => (
+											render={() => (
 												<FormItem>
 													<FormLabel>
 														Amount
@@ -969,7 +968,7 @@ const Create: React.FC = () => {
 										<FormField
 											control={control}
 											name='transferPercentage'
-											render={({ field }) => (
+											render={() => (
 												<FormItem>
 													<FormLabel>
 														TGE Percentage

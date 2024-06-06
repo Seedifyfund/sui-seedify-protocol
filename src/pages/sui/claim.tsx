@@ -1,6 +1,5 @@
 "use client";
-import Image from "next/image";
-import { useRouter } from "next/router";
+
 import { Copy } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui.js/client";
@@ -139,7 +138,7 @@ const Claim: React.FC = () => {
 
   const calculateClaimableAmount = (wallet: WalletFields): number => {
     const currentTime = Date.now();
-    const elapsed = Math.max(currentTime - wallet.start, 0);
+    // const elapsed = Math.max(currentTime - wallet.start, 0);
     const vestedAmount = linear_vested_amount(wallet.start, wallet.duration * (24 * 60 * 60 * 1000), wallet.balance * 1_000_000_000, wallet.released * 1_000_000_000, currentTime);
     const claimable = vestedAmount - (wallet.released * 1_000_000_000);
 

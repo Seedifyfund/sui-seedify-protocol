@@ -6,7 +6,7 @@ import "@mysten/dapp-kit/dist/index.css";
 import { ConnectButton } from "@mysten/dapp-kit";
 import "@suiet/wallet-kit/style.css";
 export function UserNav() {
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
 

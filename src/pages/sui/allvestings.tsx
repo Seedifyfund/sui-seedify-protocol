@@ -4,8 +4,11 @@ import { useRouter } from "next/router";
 import { Copy } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui.js/client";
+import { useCurrentAccount, useSignAndExecuteTransactionBlock } from "@mysten/dapp-kit";
+import { TransactionBlock } from "@mysten/sui.js/transactions";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
+import "@mysten/dapp-kit/dist/index.css";
 import Tooltip from "@/components/custom/Tooltip";
 import {
   Table,
@@ -16,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Sidebar2 from '../../components/sidebar';
-import axios from 'axios';
 
 interface WalletFields {
   id: { id: string };
@@ -29,98 +31,81 @@ interface WalletFields {
   start: number;
   walletType: string;
   coinName: string;
+  receiver: string;
 }
 
 const Alvestings: React.FC = () => {
+  const currentAccount = useCurrentAccount();
   const client = new SuiClient({ url: getFullnodeUrl("testnet") });
   const [wallets, setWallets] = useState<WalletFields[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
   const packageId = "0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27";
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await axios.get("/api/vesting");
-        const accounts = response.data.allVesting;
-        const addresses = accounts.map((account: any) => account.receiver);
-
-        fetchVestingStatus(addresses);
-      } catch (error) {
-        console.error("Error fetching vesting data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const fetchVestingStatus = async (addresses: string[]) => {
+  const fetchVestingStatus = async () => {
     try {
       toast.info("Fetching vesting status...");
+      const response: any = await client.getOwnedObjects({
+        owner: currentAccount?.address || "",
+        filter: {
+          StructType: `${packageId}::torqueprotocol::Wallet`
+        },
+        options: {
+          showType: true,
+          showContent: true,
+        },
+      });
 
-      const allWallets: WalletFields[] = [];
+      const filteredObjects = response.data.filter((obj: any) => obj.data?.objectId);
 
-      for (const address of addresses) {
-        const response: any = await client.getOwnedObjects({
-          owner: address,
-          filter: {
-            StructType: `${packageId}::torqueprotocol::Wallet`
-          },
-          options: {
-            showType: true,
-            showContent: true,
-          },
-        });
+      const fetchedWallets = await Promise.all(
+        filteredObjects.map(async (obj: any) => {
+          try {
+            const walletResponse: any = await client.getObject({
+              id: obj.data.objectId,
+              options: { showContent: true },
+            });
 
-        const filteredObjects = response.data.filter((obj: any) => obj.data?.objectId);
+            const wallet = walletResponse.data;
+            console.log('Wallet Object:', JSON.stringify(wallet, null, 2)); // Log the entire wallet object
 
-        const fetchedWallets = await Promise.all(
-          filteredObjects.map(async (obj: any) => {
-            try {
-              const walletResponse: any = await client.getObject({
-                id: obj.data.objectId,
-                options: { showContent: true },
-              });
+            const fields = wallet?.content?.fields;
+            const releasable = await getReleasableAmount(fields.id.id);
 
-              const wallet = walletResponse.data;
-              console.log('Wallet Object:', JSON.stringify(wallet, null, 2)); // Log the entire wallet object
+            // Extract walletType from the full type string
+            const fullType = wallet.content.type;
+            const typeMatch = fullType.match(/<(.+)>/);
+            const walletType = typeMatch ? typeMatch[1] : null;
 
-              const fields = wallet?.content?.fields;
-              const releasable = await getReleasableAmount(fields.id.id);
+            console.log('Extracted Wallet Type:', walletType); // Debug logging
 
-              // Extract walletType from the full type string
-              const fullType = wallet.content.type;
-              const typeMatch = fullType.match(/<(.+)>/);
-              const walletType = typeMatch ? typeMatch[1] : null;
+            // Fetch coin metadata to get coinName
+            const coinMetadata = await client.getCoinMetadata({ coinType: walletType });
+            const coinName = coinMetadata?.name ?? ""; // Add null check for coinMetadata
 
-              console.log('Extracted Wallet Type:', walletType); // Debug logging
+            // Include the receiver address
+            const receiver = currentAccount?.address || "";
 
-              // Fetch coin metadata to get coinName
-              const coinMetadata = await client.getCoinMetadata({ coinType: walletType });
-              const coinName = coinMetadata?.name ?? ""; // Add null check for coinMetadata
+            return {
+              id: { id: fields.id.id },
+              balance: Number(fields.balance) / 1_000_000_000, // Adjust balance
+              released: Number(fields.released) / 1_000_000_000, // Adjust released
+              duration: Number(fields.duration) / (24 * 60 * 60 * 1000), // Convert to days
+              claim_interval: Number(fields.claim_interval) / (24 * 60 * 60 * 1000), // Convert to days
+              last_claimed: Number(fields.last_claimed),  // Store last claimed timestamp
+              start: Number(fields.start),
+              releasable: Number(releasable) / 1_000_000_000, // Adjust releasable amount
+              walletType: walletType, // Use the extracted walletType
+              coinName: coinName, // Add coinName
+              receiver: receiver, // Add receiver
+            } as WalletFields;
+          } catch (error) {
+            console.log('Error fetching wallet details:', error);
+            return null;
+          }
+        })
+      );
 
-              return {
-                id: { id: fields.id.id },
-                balance: Number(fields.balance) / 1_000_000_000, // Adjust balance
-                released: Number(fields.released) / 1_000_000_000, // Adjust released
-                duration: Number(fields.duration) / (24 * 60 * 60 * 1000), // Convert to days
-                claim_interval: Number(fields.claim_interval) / (24 * 60 * 60 * 1000), // Convert to days
-                last_claimed: Number(fields.last_claimed),  // Store last claimed timestamp
-                start: Number(fields.start),
-                releasable: Number(releasable) / 1_000_000_000, // Adjust releasable amount
-                walletType: walletType, // Use the extracted walletType
-                coinName: coinName, // Add coinName
-              } as WalletFields;
-            } catch (error) {
-              console.log('Error fetching wallet details:', error);
-              return null;
-            }
-          })
-        );
-
-        allWallets.push(...fetchedWallets.filter(wallet => wallet !== null) as WalletFields[]);
-      }
-
-      setWallets(allWallets);
+      setWallets(fetchedWallets.filter(wallet => wallet !== null) as WalletFields[]);
       toast.success("Vesting status fetched successfully!");
     } catch (error) {
       toast.error("Failed to fetch vesting status.");
@@ -164,6 +149,12 @@ const Alvestings: React.FC = () => {
     return vestedAmount;
   };
 
+  useEffect(() => {
+    if (currentAccount) {
+      fetchVestingStatus();
+    }
+  }, [currentAccount]);
+
   const formatNumber = (value: number) => {
     return (value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
   };
@@ -190,6 +181,7 @@ const Alvestings: React.FC = () => {
                     <Table className="min-w-full text-white">
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Receiver Address</TableHead> {/* New column */}
                           <TableHead>Wallet ID</TableHead>
                           <TableHead>Coin Name</TableHead>
                           <TableHead>Copy ID</TableHead>
@@ -207,6 +199,7 @@ const Alvestings: React.FC = () => {
                           const claimableAmount = (wallet.releasable - wallet.released);
                           return (
                             <TableRow className="font-bold text-white" key={wallet.id.id || index}>
+                              <TableCell>{wallet.receiver}</TableCell> {/* New cell */}
                               <TableCell>{shortenWalletId(wallet.id.id)}</TableCell>
                               <TableCell>{wallet.coinName}</TableCell>
                               <TableCell>

@@ -57,7 +57,7 @@ export const sidelinks: SideLink[] = [
   {
     title: 'All Vestings',
     label: '9',
-    href: '/allvestings',
+    href: '/coming-soon',
     icon: <IconChecklist size={18} />,
   },
 

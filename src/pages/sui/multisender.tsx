@@ -41,6 +41,7 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 	const [selectedCoin, setSelectedCoin] = useState<string>("");
 	const [selectedCoinType, setSelectedCoinType] = useState<string>("");
 	const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0);
+    
 
 	useEffect(() => {
 		if (currentAccount) {
@@ -112,23 +113,28 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 		setAmounts([...amounts, 0]);
 	};
 
-	const updateRecipient = (index: number, value: string) => {
-		const updatedRecipients = [...recipients];
-		updatedRecipients[index] = value;
-		setRecipients(updatedRecipients);
-	};
-
-	const updateAmount = (index: number, value: string) => {
+    const updateRecipient = (index: number, value: string) => {
+        const updatedRecipients = [...recipients];
+        updatedRecipients[index] = value;
+        setRecipients(updatedRecipients);
+    };
+    
+    const updateAmount = (index: number, value: string) => {
         const updatedAmounts = [...amounts];
+        const updatedInputValues = [...inputValues];
+        
         if (value === "") {
+            updatedInputValues[index] = "";
             updatedAmounts[index] = 0;
         } else {
             const parsedValue = parseFloat(value);
             if (!isNaN(parsedValue)) {
+                updatedInputValues[index] = value;
                 updatedAmounts[index] = parsedValue;
             }
         }
         setAmounts(updatedAmounts);
+        setInputValues(updatedInputValues);
     };
     
 	const sendToMultiple = async () => {
@@ -299,10 +305,12 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 											<Input
     type='number'
     placeholder='Amount'
-    value={amounts[index] === 0 ? '' : amounts[index]}
+    value={inputValues[index]}
     onChange={(e) => updateAmount(index, e.target.value)}
     className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+    step="any"  // This allows the input to accept decimal values
 />
+
 
 
 										</div>

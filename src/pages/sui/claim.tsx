@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import Sidebar2 from '../../components/sidebar';
+import { useNetwork } from '../../context/Providers'; // Adjust the path as necessary
+
 
 interface WalletFields {
   id: { id: string };
@@ -35,7 +37,8 @@ interface WalletFields {
 const Claim: React.FC = () => {
   const currentAccount = useCurrentAccount();
   const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
-  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+  const { selectedNetwork } = useNetwork(); // Use selectedNetwork from context
+  const client = new SuiClient({ url: getFullnodeUrl(selectedNetwork) });
   const [wallets, setWallets] = useState<WalletFields[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
   const packageId = "0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27";

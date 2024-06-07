@@ -5,15 +5,17 @@ import { Dialog, Transition } from '@headlessui/react';
 import "@mysten/dapp-kit/dist/index.css";
 import { ConnectButton } from "@mysten/dapp-kit";
 import "@suiet/wallet-kit/style.css";
+import { useNetwork } from '../context/Providers'; // Adjust the path as necessary
+
 export function UserNav() {
   const [isConnected] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-
+  const { selectedNetwork, changeNetwork } = useNetwork();
 
   return (
     <>
       <Button variant="outline" onClick={() => setDialogOpen(true)}>
-        {isConnected ? "Sui Mainnet" : "Select Network"}
+        {isConnected ? selectedNetwork.charAt(0).toUpperCase() + selectedNetwork.slice(1) : "Select Network"}
       </Button>
 
       <Transition show={dialogOpen} as={Fragment}>
@@ -60,7 +62,21 @@ export function UserNav() {
                     </div>
                   </div>
                   <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-center">
-                    <ConnectButton />
+                    <button
+                      className={`px-4 py-2 mr-2 ${selectedNetwork === 'testnet' ? 'bg-yellow-500 text-white' : 'bg-gray-200'}`}
+                      onClick={() => changeNetwork('testnet')}
+                    >
+                      Testnet
+                    </button>
+                    <button
+                      className={`px-4 py-2 ${selectedNetwork === 'mainnet' ? 'bg-green-500 text-white' : 'bg-gray-200'}`}
+                      onClick={() => changeNetwork('mainnet')}
+                    >
+                      Mainnet
+                    </button>
+                  </div>
+                  <div className="bg-gray-50 px-4 py-3 sm:px-6 flex justify-center">
+                    <ConnectButton connectText="Connect Wallet" />
                   </div>
                 </Dialog.Panel>
               </Transition.Child>

@@ -8,9 +8,8 @@ import '@/index.css'
 import Providers from './context/Providers'
 
 
-
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <Providers><React.StrictMode>
+  <Providers ><React.StrictMode>
     <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
       <RouterProvider router={router} />
       <Toaster />

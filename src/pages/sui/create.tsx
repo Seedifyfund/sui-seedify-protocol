@@ -44,6 +44,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import axios from "axios";
 import Sidebar2 from "../../components/sidebar";
+import { useNetwork } from '../../context/Providers'; // Adjust the path as necessary
+
 
 const formSchema = z.object({
 	investorName: z.string().min(1, "Investor Name is required"),
@@ -132,7 +134,8 @@ const Create: React.FC = () => {
 	const [, setSelectedCoin] = useState("");
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 
-	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+	const { selectedNetwork } = useNetwork(); // Use selectedNetwork from context
+	const client = new SuiClient({ url: getFullnodeUrl(selectedNetwork) });
 
 	useEffect(() => {
 		if (currentAccount) {

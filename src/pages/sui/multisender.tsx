@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast, ToastContainer } from "react-toastify";
 import { UserNav } from '@/components/user-nav';
 import "react-toastify/dist/ReactToastify.css";
-import ThemeSwitch from '@/components/theme-switch';
-import { Layout, LayoutBody, LayoutHeader } from '@/components/custom/layout';
+import { Layout, LayoutHeader } from '@/components/custom/layout';
 import {
 	useCurrentAccount,
 	useSignAndExecuteTransactionBlock,
@@ -16,6 +15,7 @@ import {
 import Sidebar2 from "../../components/sidebar";
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { useNetwork } from '../../context/Providers'; // Adjust the path as necessary
 
 interface CoinBalance {
 	coinType: string;
@@ -27,7 +27,8 @@ interface CoinBalance {
 const Multisender: React.FC = () => {
 	const currentAccount = useCurrentAccount();
 	const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
-	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+	const { selectedNetwork } = useNetwork(); // Use selectedNetwork from context
+	const client = new SuiClient({ url: getFullnodeUrl(selectedNetwork) });
 	const [recipients, setRecipients] = useState<string[]>([""]);
 	const [amounts, setAmounts] = useState<number[]>([0]);
 	const [inputValues, setInputValues] = useState<string[]>([""]);
@@ -45,12 +46,14 @@ const Multisender: React.FC = () => {
 	const [selectedCoinType, setSelectedCoinType] = useState<string>("");
 	const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0);
 	const [csvUploaded, setCsvUploaded] = useState<boolean>(false); // State to track CSV upload
-const [fileName, setFileName] = useState<string | null>(null); 
+	const [fileName, setFileName] = useState<string | null>(null); 
+
+
 	useEffect(() => {
 		if (currentAccount) {
 			fetchBalances(currentAccount.address);
 		}
-	}, [currentAccount]);
+	}, [currentAccount, selectedNetwork]); // Include selectedNetwork in the dependency array
 
 	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];

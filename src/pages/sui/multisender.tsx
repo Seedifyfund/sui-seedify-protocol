@@ -120,72 +120,109 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 
 	const updateAmount = (index: number, value: string) => {
         const updatedAmounts = [...amounts];
-        const updatedInputValues = [...inputValues];
-        
         if (value === "") {
-            updatedInputValues[index] = "";
             updatedAmounts[index] = 0;
         } else {
             const parsedValue = parseFloat(value);
             if (!isNaN(parsedValue)) {
-                updatedInputValues[index] = value;
                 updatedAmounts[index] = parsedValue;
             }
         }
         setAmounts(updatedAmounts);
-        setInputValues(updatedInputValues);
     };
-
+    
 	const sendToMultiple = async () => {
-		if (!currentAccount) {
-			toast.error("Please connect the wallet first");
-			return;
-		}
-
-		if (!selectedCoin) {
-			toast.error("Token object ID is required");
-			return;
-		}
-
-		if (recipients.length === 0 || amounts.length === 0) {
-			toast.error("Recipients and amounts are required");
-			return;
-		}
-
-		try {
-			toast.info("Sending tokens...");
-
-			const scaledAmounts = amounts.map(amount => BigInt(amount * Math.pow(10, selectedCoinDecimals)));
-
-			const txBlock = new TransactionBlock();
-			txBlock.setGasBudget(10000000); // Ensure you have enough gas budget
-
-			txBlock.moveCall({
-				target: "0xdd2844cb4f7e5dfa9f4e4dd83f75af9e1ad5a5009c12f70c3d751f1e57ecf3b3::multisender::entry_send_to_multiple",
-				arguments: [
-					txBlock.object(selectedCoin),
-					txBlock.pure(recipients, "vector<address>"),
-					txBlock.pure(scaledAmounts, "vector<u64>"),
-				],
-				typeArguments: [selectedCoinType], // Use the actual coin type
-			});
-
-			const result = await signAndExecuteTransactionBlock.mutateAsync({
-				transactionBlock: txBlock,
-				options: {
-					showObjectChanges: true,
-					showEffects: true,
-				},
-				requestType: "WaitForLocalExecution",
-			});
-
-			console.log("Transaction result:", result);
-			toast.success("Tokens sent successfully!");
-		} catch (e) {
-			console.error("Transaction error:", e);
-			toast.error("Failed to send tokens.");
-		}
-	};
+        if (!currentAccount) {
+            toast.error("Please connect the wallet first");
+            return;
+        }
+    
+        if (!selectedCoin) {
+            toast.error("Token object ID is required");
+            return;
+        }
+    
+        if (recipients.length === 0 || amounts.length === 0) {
+            toast.error("Recipients and amounts are required");
+            return;
+        }
+    
+        try {
+            toast.info("Sending tokens...");
+    
+            const scaledAmounts = amounts.map(amount => BigInt(amount * Math.pow(10, selectedCoinDecimals)));
+    
+            const txBlock = new TransactionBlock();
+            txBlock.setGasBudget(10000000); // Ensure you have enough gas budget
+    
+            for (let i = 0; i < recipients.length; i++) {
+                const recipient = recipients[i];
+                const amount = scaledAmounts[i];
+    
+                // Fetch enough coin objects to cover the amount
+                let remainingAmount = amount;
+                let coinObjects = [];
+                let cursor = null;
+    
+                while (remainingAmount > 0) {
+                    const result = await client.getCoins({
+                        owner: currentAccount.address,
+                        coinType: selectedCoinType,
+                        limit: 50,
+                        cursor: cursor,
+                    });
+    
+                    for (let coin of result.data) {
+                        const coinBalance = BigInt(coin.balance);
+    
+                        if (coinBalance >= remainingAmount) {
+                            coinObjects.push({ coinObjectId: coin.coinObjectId, amount: remainingAmount });
+                            remainingAmount = 0n;
+                            break;
+                        } else {
+                            coinObjects.push({ coinObjectId: coin.coinObjectId, amount: coinBalance });
+                            remainingAmount -= coinBalance;
+                        }
+                    }
+    
+                    cursor = result.nextCursor;
+    
+                    if (!result.hasNextPage && remainingAmount > 0) {
+                        throw new Error("Insufficient balance to complete the transaction");
+                    }
+                }
+    
+                // Create a move call for each coin object
+                for (let coin of coinObjects) {
+                    txBlock.moveCall({
+                        target: "0xdd2844cb4f7e5dfa9f4e4dd83f75af9e1ad5a5009c12f70c3d751f1e57ecf3b3::multisender::entry_send_to_multiple",
+                        arguments: [
+                            txBlock.object(coin.coinObjectId),
+                            txBlock.pure([recipient], "vector<address>"),
+                            txBlock.pure([coin.amount], "vector<u64>"),
+                        ],
+                        typeArguments: [selectedCoinType],
+                    });
+                }
+            }
+    
+            const result = await signAndExecuteTransactionBlock.mutateAsync({
+                transactionBlock: txBlock,
+                options: {
+                    showObjectChanges: true,
+                    showEffects: true,
+                },
+                requestType: "WaitForLocalExecution",
+            });
+    
+            console.log("Transaction result:", result);
+            toast.success("Tokens sent successfully!");
+        } catch (e) {
+            console.error("Transaction error:", e);
+            toast.error("Failed to send tokens.");
+        }
+    };
+    
 
 	return (
 		<>
@@ -262,11 +299,11 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 											<Input
     type='number'
     placeholder='Amount'
-    value={inputValues[index]}
+    value={amounts[index] === 0 ? '' : amounts[index]}
     onChange={(e) => updateAmount(index, e.target.value)}
     className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-    step="any"  // This allows the input to accept decimal values
 />
+
 
 										</div>
 									))}

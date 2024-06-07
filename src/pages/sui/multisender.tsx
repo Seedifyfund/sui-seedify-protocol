@@ -5,7 +5,10 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast, ToastContainer } from "react-toastify";
+import { UserNav } from '@/components/user-nav';
 import "react-toastify/dist/ReactToastify.css";
+import ThemeSwitch from '@/components/theme-switch';
+import { Layout, LayoutBody, LayoutHeader } from '@/components/custom/layout';
 import {
 	useCurrentAccount,
 	useSignAndExecuteTransactionBlock,
@@ -27,7 +30,7 @@ const Multisender: React.FC = () => {
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 	const [recipients, setRecipients] = useState<string[]>([""]);
 	const [amounts, setAmounts] = useState<number[]>([0]);
-const [inputValues, setInputValues] = useState<string[]>([""]);
+	const [inputValues, setInputValues] = useState<string[]>([""]);
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 	const [coins, setCoins] = useState<
 		{
@@ -41,13 +44,40 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 	const [selectedCoin, setSelectedCoin] = useState<string>("");
 	const [selectedCoinType, setSelectedCoinType] = useState<string>("");
 	const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0);
-    
-
+	const [csvUploaded, setCsvUploaded] = useState<boolean>(false); // State to track CSV upload
+const [fileName, setFileName] = useState<string | null>(null); 
 	useEffect(() => {
 		if (currentAccount) {
 			fetchBalances(currentAccount.address);
 		}
 	}, [currentAccount]);
+
+	const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const text = e.target?.result as string;
+				const csvRows = text.split("\n").slice(1); // Skip header row
+				const newRecipients: string[] = [];
+				const newAmounts: number[] = [];
+				const newInputValues: string[] = [];
+				csvRows.forEach((row) => {
+					const [recipient, amount] = row.split(",");
+					if (recipient && amount) {
+						newRecipients.push(recipient);
+						newAmounts.push(parseFloat(amount));
+						newInputValues.push(amount);
+					}
+				});
+				setRecipients(newRecipients);
+				setAmounts(newAmounts);
+				setInputValues(newInputValues);
+				setCsvUploaded(true); // Mark CSV as uploaded
+			};
+			reader.readAsText(file);
+		}
+	};
 
 	const fetchBalances = async (ownerAddress: string) => {
 		try {
@@ -111,14 +141,15 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 	const addRecipient = () => {
 		setRecipients([...recipients, ""]);
 		setAmounts([...amounts, 0]);
+		setInputValues([...inputValues, ""]);
 	};
 
-    const updateRecipient = (index: number, value: string) => {
-        const updatedRecipients = [...recipients];
-        updatedRecipients[index] = value;
-        setRecipients(updatedRecipients);
-    };
-    
+	const updateRecipient = (index: number, value: string) => {
+		const updatedRecipients = [...recipients];
+		updatedRecipients[index] = value;
+		setRecipients(updatedRecipients);
+	};
+
     const updateAmount = (index: number, value: string) => {
         const updatedAmounts = [...amounts];
         const updatedInputValues = [...inputValues];
@@ -136,7 +167,7 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
         setAmounts(updatedAmounts);
         setInputValues(updatedInputValues);
     };
-    
+
 	const sendToMultiple = async () => {
         if (!currentAccount) {
             toast.error("Please connect the wallet first");
@@ -228,10 +259,16 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
             toast.error("Failed to send tokens.");
         }
     };
-    
 
 	return (
-		<>
+		 <Layout>
+        <LayoutHeader>
+          <div className='ml-auto flex items-center space-x-4'>
+           
+            
+            <UserNav />
+          </div>
+        </LayoutHeader>
 			<div className='flex'>
 				<Sidebar2
 					isCollapsed={isCollapsed}
@@ -276,16 +313,32 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 											</SelectContent>
 										</Select>
 									</div>
-									<div>
-										<Button
-											type='button'
-											onClick={addRecipient}
-											className='w-full bg-gradient-to-r from-cyan-300 to-sky-500 text-black hover:bg-slate-700'
-										>
-											Add Recipient
-										</Button>
-									</div>
-									{recipients.map((recipient, index) => (
+									<div className='flex justify-center'>
+                                    <div className='file-input-wrapper'>
+                                        <label className='block mb-2 font-bold text-white'>
+                                            {csvUploaded ? "CSV Uploaded" : "Choose CSV"}
+                                        </label>
+                                        <input
+                                            type='file'
+                                            accept='.csv'
+                                            onChange={handleFileUpload}
+                                            className='w-full bg-gradient-to-r from-emerald-200 to-green-500 text-black hover:bg-green-700 p-2 rounded-md cursor-pointer'
+                                        />
+                                    </div>
+                                </div>
+
+									{!csvUploaded && (
+										<div>
+											<Button
+												type='button'
+												onClick={addRecipient}
+												className='w-full bg-gradient-to-r from-cyan-300 to-sky-500 text-black hover:bg-slate-700'
+											>
+												Add Recipient
+											</Button>
+										</div>
+									)}
+									{!csvUploaded && recipients.map((recipient, index) => (
 										<div
 											key={index}
 											className='flex space-x-2'
@@ -303,16 +356,13 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 												className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
 											/>
 											<Input
-    type='number'
-    placeholder='Amount'
-    value={inputValues[index]}
-    onChange={(e) => updateAmount(index, e.target.value)}
-    className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-    step="any"  // This allows the input to accept decimal values
-/>
-
-
-
+												type='number'
+												placeholder='Amount'
+												value={inputValues[index]}
+												onChange={(e) => updateAmount(index, e.target.value)}
+												className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+												step="any"  // This allows the input to accept decimal values
+											/>
 										</div>
 									))}
 									<Button
@@ -328,7 +378,7 @@ const [inputValues, setInputValues] = useState<string[]>([""]);
 					</div>
 				</div>
 			</div>
-		</>
+		</Layout>
 	);
 };
 

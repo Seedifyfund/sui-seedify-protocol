@@ -94,7 +94,7 @@ export function RecentSales() {
   };
 
   return (
-    <div className='space-y-8'>
+    <div className='space-y-8 md:h-[400px] overflow-scroll'>
       <ToastContainer />
       <TooltipProvider>
         {wallets.map((wallet) => (

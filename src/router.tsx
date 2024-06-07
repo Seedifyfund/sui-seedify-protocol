@@ -48,6 +48,12 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/multisender',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/multisender')).default,
+    }),
+  },
+  {
     path: '/forgot-password',
     lazy: async () => ({
       Component: (await import('./pages/auth/forgot-password')).default,

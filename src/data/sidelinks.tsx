@@ -46,7 +46,7 @@ export const sidelinks: SideLink[] = [
   {
     title: 'Multisender',
     label: '',
-    href: '/coming-soon',
+    href: '/multisender',
     icon: <IconApps size={18} />,
   },
   {

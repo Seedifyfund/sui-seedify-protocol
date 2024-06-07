@@ -27,6 +27,7 @@ const Multisender: React.FC = () => {
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 	const [recipients, setRecipients] = useState<string[]>([""]);
 	const [amounts, setAmounts] = useState<number[]>([0]);
+const [inputValues, setInputValues] = useState<string[]>([""]);
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 	const [coins, setCoins] = useState<
 		{
@@ -118,15 +119,22 @@ const Multisender: React.FC = () => {
 	};
 
 	const updateAmount = (index: number, value: string) => {
-		const updatedAmounts = [...amounts];
-		const parsedValue = parseFloat(value);
-		if (!isNaN(parsedValue)) {
-			updatedAmounts[index] = parsedValue;
-		} else {
-			updatedAmounts[index] = 0;
-		}
-		setAmounts(updatedAmounts);
-	};
+        const updatedAmounts = [...amounts];
+        const updatedInputValues = [...inputValues];
+        
+        if (value === "") {
+            updatedInputValues[index] = "";
+            updatedAmounts[index] = 0;
+        } else {
+            const parsedValue = parseFloat(value);
+            if (!isNaN(parsedValue)) {
+                updatedInputValues[index] = value;
+                updatedAmounts[index] = parsedValue;
+            }
+        }
+        setAmounts(updatedAmounts);
+        setInputValues(updatedInputValues);
+    };
 
 	const sendToMultiple = async () => {
 		if (!currentAccount) {
@@ -192,7 +200,7 @@ const Multisender: React.FC = () => {
 						<div className='flex justify-center items-center min-h-screen'>
 							<div className='rounded-lg shadow-lg p-6 w-full max-w-md'>
 								<h2 className='text-2xl font-semibold mb-4 text-center'>
-									Send Tokens to Multiple Recipients
+									Send Coins to Multiple Recipients
 								</h2>
 								<form className='space-y-8'>
 									<div>
@@ -229,7 +237,7 @@ const Multisender: React.FC = () => {
 										<Button
 											type='button'
 											onClick={addRecipient}
-											className='w-full bg-blue-600 text-white hover:bg-blue-700'
+											className='w-full bg-gradient-to-r from-cyan-300 to-sky-500 text-black hover:bg-slate-700'
 										>
 											Add Recipient
 										</Button>
@@ -252,25 +260,22 @@ const Multisender: React.FC = () => {
 												className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
 											/>
 											<Input
-												type='number'
-												placeholder='Amount'
-												value={amounts[index]}
-												onChange={(e) =>
-													updateAmount(
-														index,
-														e.target.value
-													)
-												}
-												className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-											/>
+    type='number'
+    placeholder='Amount'
+    value={inputValues[index]}
+    onChange={(e) => updateAmount(index, e.target.value)}
+    className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+    step="any"  // This allows the input to accept decimal values
+/>
+
 										</div>
 									))}
 									<Button
 										type='button'
 										onClick={sendToMultiple}
-										className='w-full bg-green-600 text-white hover:bg-green-700'
+										className='w-full bg-gradient-to-r from-emerald-200 to-green-500 text-black hover:bg-green-700'
 									>
-										Send Tokens
+										Send Coins
 									</Button>
 								</form>
 							</div>

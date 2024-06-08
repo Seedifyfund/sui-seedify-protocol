@@ -44,7 +44,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import axios from "axios";
 import Sidebar2 from "../../components/sidebar";
-import { useNetwork } from '../../context/Providers'; // Adjust the path as necessary
+import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
 
 
 const formSchema = z.object({
@@ -134,8 +134,8 @@ const Create: React.FC = () => {
 	const [, setSelectedCoin] = useState("");
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 
-	const { selectedNetwork } = useNetwork(); // Use selectedNetwork from context
-	const client = new SuiClient({ url: getFullnodeUrl(selectedNetwork) });
+	const { network } = useNetwork(); // Use selectedNetwork from context
+	const client = new SuiClient({ url: getFullnodeUrl(network) });
 
 	useEffect(() => {
 		if (currentAccount) {
@@ -338,12 +338,14 @@ const Create: React.FC = () => {
 			version: gasVersion,
 			digest: gasDigest,
 		});
-		// txBlock.setGasPayment([
-		//   { objectId: gasObjectId, version: gasVersion, digest: gasDigest },
-		// ]);
-		txBlock.setGasBudget(10000000);
+		txBlock.setGasPayment([
+		  { objectId: gasObjectId, version: gasVersion, digest: gasDigest },
+		]);
+
+		// 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
+		txBlock.setGasBudget(100000000);
 		txBlock.moveCall({
-			target: "0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27::torqueprotocol::entry_new",
+			target: "0x55a00fa668b4f75bb719a63b9c1a6db172f393a05e9d5c6479aa40a872d12702::torqueprotocol::entry_new",
 			arguments: [
 				txBlock.object(coin), // Use the mutable coin object ID
 				txBlock.pure(scaledAmount, "u64"),

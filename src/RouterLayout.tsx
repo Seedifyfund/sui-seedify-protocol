@@ -5,7 +5,7 @@ import { config } from '@/config';
 import Web3ModalProvider from '@/context';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
-import { WalletProvider } from "@suiet/wallet-kit";
+import { WalletProvider } from "@mysten/dapp-kit";
 import Providers from '@/context/Providers'; // Assuming the context provider is in this path
 
 export const metadata: Metadata = {
@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Web3ModalProvider initialState={initialState}>
+       
           <Providers>
             <WalletProvider>
               <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </ThemeProvider>
             </WalletProvider>
           </Providers>
-        </Web3ModalProvider>
+        
       </body>
     </html>
   );

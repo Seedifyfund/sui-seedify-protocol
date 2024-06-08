@@ -168,7 +168,7 @@ export default function Dashboard() {
       <LayoutBody className='space-y-4'>
         <div className='flex items-center justify-between space-y-2'>
           <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
-            Dashboard
+            Vesting Dashboard
           </h1>
         </div>
         <Tabs orientation='vertical' defaultValue='overview' className='space-y-4'>

@@ -26,19 +26,19 @@ export const sidelinks: SideLink[] = [
   },
   {
     title: 'Create Vesting',
-    label: '3',
+    label: '',
     href: '/create',
     icon: <IconChecklist size={18} />,
   },
   {
     title: 'Claim Coins',
-    label: '9',
+    label: '',
     href: '/claim',
     icon: <IconChecklist size={18} />,
   },
   {
     title: 'All Vestings',
-    label: '9',
+    label: '',
     href: '/coming-soon',
     icon: <IconChecklist size={18} />,
   },

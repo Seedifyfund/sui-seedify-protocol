@@ -146,4 +146,13 @@
   cursor: pointer;
 }
 
+.nav-link {
+  font-size: 18px; /* Increase this value to make the text larger */
+}
+
+.nav-label {
+  font-size: 14px; /* Increase this value to make the label text larger */
+}
+
+
 

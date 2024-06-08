@@ -21,17 +21,19 @@ interface WalletFields {
 export function RecentSales() {
   const currentAccount = useCurrentAccount();
   const { network } = useNetwork(); // Use selectedNetwork from context
-	const client = new SuiClient({ url: getFullnodeUrl(network) });
+  const client = new SuiClient({ url: getFullnodeUrl(network) });
   const [wallets, setWallets] = useState<WalletFields[]>([]);
   const [copiedWalletId, setCopiedWalletId] = useState<string | null>(null);
+  const torqueProtocolAddress = network === 'mainnet'
+    ? import.meta.env.VITE_MAINNET_TORQUE_ADDRESS
+    : import.meta.env.VITE_TESTNET_TORQUE_ADDRESS;
 
   const fetchVestingStatus = async () => {
     try {
-      // toast.info("Fetching recent sales...");
       const response = await client.getOwnedObjects({
         owner: currentAccount?.address || '',
         filter: {
-          StructType: '0x55a00fa668b4f75bb719a63b9c1a6db172f393a05e9d5c6479aa40a872d12702::torqueprotocol::Wallet',
+          StructType: `${torqueProtocolAddress}::torqueprotocol::Wallet`,
         },
         options: {
           showType: true,
@@ -69,9 +71,7 @@ export function RecentSales() {
       );
 
       setWallets(fetchedWallets.filter(wallet => wallet !== null) as WalletFields[]);
-      // toast.success("Recent Vestings fetched successfully!");
     } catch (error) {
-      // toast.error("Failed to fetch recent Vestings.");
       console.error('Failed to fetch vesting status:', error);
     }
   };
@@ -96,37 +96,41 @@ export function RecentSales() {
   };
 
   return (
-    <div className='space-y-8 md:h-[400px] overflow-scroll'>
+    <div className='space-y-8 '>
       <ToastContainer />
       <TooltipProvider>
-        {wallets.map((wallet) => (
-          <div className='flex items-center' key={wallet.id}>
-            <div className='ml-4 space-y-1'>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    className="text-sm font-medium leading-none flex items-center"
-                    onClick={() => handleCopy(wallet.id)}
-                  >
-                    Wallet ID: {shortenWalletId(wallet.id)}
-                    {copiedWalletId === wallet.id ? (
-                      <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="ml-2 h-4 w-4" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Copy Wallet ID</p>
-                </TooltipContent>
-              </Tooltip>
-              <p className='text-sm text-muted-foreground'>Coin Name:<span className='text-green-600'> {wallet.coinName}</span></p>
+        <div className='md:h-[400px] overflow-auto'>
+          {wallets.map((wallet) => (
+            <div className='flex items-center mb-4' key={wallet.id}>
+              <div className='ml-4 space-y-1'>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className="text-sm font-medium leading-none flex items-center"
+                      onClick={() => handleCopy(wallet.id)}
+                    >
+                      Wallet ID: {shortenWalletId(wallet.id)}
+                      {copiedWalletId === wallet.id ? (
+                        <CheckCircle className="ml-2 h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="ml-2 h-4 w-4" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy Wallet ID</p>
+                  </TooltipContent>
+                </Tooltip>
+                <p className='text-sm text-muted-foreground'>
+                  Coin Name:<span className='text-green-600'> {wallet.coinName}</span>
+                </p>
+              </div>
+              <div className='ml-auto text-xs font-medium'>
+                Start Date: {wallet.start ? new Date(wallet.start).toLocaleString() : 'Invalid Date'}
+              </div>
             </div>
-            <div className='ml-auto text-xs font-medium'>
-              Start Date: {wallet.start ? new Date(wallet.start).toLocaleString() : 'Invalid Date'}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </TooltipProvider>
     </div>
   );

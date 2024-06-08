@@ -45,7 +45,8 @@ import { format } from "date-fns";
 import axios from "axios";
 import Sidebar2 from "../../components/sidebar";
 import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
-
+import { UserNav } from '@/components/user-nav';
+import { Layout, LayoutHeader } from '@/components/custom/layout';
 
 const formSchema = z.object({
 	investorName: z.string().min(1, "Investor Name is required"),
@@ -137,11 +138,16 @@ const Create: React.FC = () => {
 	const { network } = useNetwork(); // Use selectedNetwork from context
 	const client = new SuiClient({ url: getFullnodeUrl(network) });
 
+	const torqueProtocolAddress = network === 'mainnet'
+    ? import.meta.env.VITE_MAINNET_TORQUE_ADDRESS
+    : import.meta.env.VITE_TESTNET_TORQUE_ADDRESS;
+
+
 	useEffect(() => {
-		if (currentAccount) {
-			fetchBalances(currentAccount.address);
-		}
-	}, [currentAccount]);
+        if (currentAccount) {
+            fetchBalances(currentAccount.address);
+        }
+    }, [currentAccount, network]); // Include selectedNetwork in the dependency array
 
 	const fetchBalances = async (ownerAddress: string) => {
 		try {
@@ -345,7 +351,7 @@ const Create: React.FC = () => {
 		// 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
 		txBlock.setGasBudget(100000000);
 		txBlock.moveCall({
-			target: "0x55a00fa668b4f75bb719a63b9c1a6db172f393a05e9d5c6479aa40a872d12702::torqueprotocol::entry_new",
+			target: `${torqueProtocolAddress}::torqueprotocol::entry_new`,
 			arguments: [
 				txBlock.object(coin), // Use the mutable coin object ID
 				txBlock.pure(scaledAmount, "u64"),
@@ -408,7 +414,11 @@ const Create: React.FC = () => {
 	};
 
 	return (
-		<>
+		<> <Layout><LayoutHeader>
+		<div className='ml-auto flex items-center space-x-4'>
+			<UserNav />
+		</div>
+	</LayoutHeader>
 			<div className='flex'>
 				<Sidebar2
 					isCollapsed={isCollapsed}
@@ -1038,7 +1048,7 @@ const Create: React.FC = () => {
 						</div>
 					</div>
 				</div>
-			</div>
+			</div></Layout>
 		</>
 	);
 };

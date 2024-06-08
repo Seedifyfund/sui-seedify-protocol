@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import Sidebar2 from '../../components/sidebar';
 import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
+import { Layout, LayoutHeader } from '@/components/custom/layout';
+import { UserNav } from '@/components/user-nav';
 
 
 interface WalletFields {
@@ -44,9 +46,15 @@ const Claim: React.FC = () => {
   const packageId = "0x55a00fa668b4f75bb719a63b9c1a6db172f393a05e9d5c6479aa40a872d12702";
   // 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
 
+  const torqueProtocolAddress = network === 'mainnet'
+    ? import.meta.env.VITE_MAINNET_TORQUE_ADDRESS
+    : import.meta.env.VITE_TESTNET_TORQUE_ADDRESS;
+
+    
+
   const fetchVestingStatus = async () => {
     try {
-      toast.info("Fetching vesting status...");
+      // toast.info("Fetching vesting status...");
       const response: any = await client.getOwnedObjects({
         owner: currentAccount?.address || "",
         filter: {
@@ -106,9 +114,9 @@ const Claim: React.FC = () => {
       );
 
       setWallets(fetchedWallets.filter(wallet => wallet !== null) as WalletFields[]);
-      toast.success("Vesting status fetched successfully!");
+      // toast.success("Vesting status fetched successfully!");
     } catch (error) {
-      toast.error("Failed to fetch vesting status.");
+      // toast.error("Failed to fetch vesting status.");
       console.error("Failed to fetch vesting status:", error);
     }
   };
@@ -164,7 +172,7 @@ const Claim: React.FC = () => {
       const txBlock = new TransactionBlock();
       txBlock.setGasBudget(10000000); // Ensure you have enough gas budget
       txBlock.moveCall({
-        target: `${packageId}::torqueprotocol::entry_claim`,
+        target: `${torqueProtocolAddress}::torqueprotocol::entry_claim`,
         arguments: [
           txBlock.object(walletId), // Wallet object
           txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock (use the correct clock object ID)
@@ -211,7 +219,7 @@ const Claim: React.FC = () => {
     if (currentAccount) {
       fetchVestingStatus();
     }
-  }, [currentAccount]);
+  }, [currentAccount , network]);
 
   const formatNumber = (value: number) => {
     return (value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -225,7 +233,11 @@ const Claim: React.FC = () => {
   };
 
   return (
-    <>   
+    <>   <Layout><LayoutHeader>
+		<div className='ml-auto flex items-center space-x-4'>
+			<UserNav />
+		</div>
+	</LayoutHeader>
       <div className="flex">
         <Sidebar2 isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
         <div className="flex-1">
@@ -300,7 +312,7 @@ const Claim: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div></Layout>
     </>
   );
 };

@@ -27,7 +27,7 @@ export function RecentSales() {
 
   const fetchVestingStatus = async () => {
     try {
-      toast.info("Fetching recent sales...");
+      // toast.info("Fetching recent sales...");
       const response = await client.getOwnedObjects({
         owner: currentAccount?.address || '',
         filter: {
@@ -69,9 +69,9 @@ export function RecentSales() {
       );
 
       setWallets(fetchedWallets.filter(wallet => wallet !== null) as WalletFields[]);
-      toast.success("Recent sales fetched successfully!");
+      // toast.success("Recent Vestings fetched successfully!");
     } catch (error) {
-      toast.error("Failed to fetch recent sales.");
+      // toast.error("Failed to fetch recent Vestings.");
       console.error('Failed to fetch vesting status:', error);
     }
   };

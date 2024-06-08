@@ -58,7 +58,7 @@ const Claim: React.FC = () => {
       const response: any = await client.getOwnedObjects({
         owner: currentAccount?.address || "",
         filter: {
-          StructType: `${packageId}::torqueprotocol::Wallet`
+          StructType: `${torqueProtocolAddress}::torqueprotocol::Wallet`
         },
         options: {
           showType: true,

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { Button } from "@/components/ui/button";
@@ -29,6 +27,11 @@ const Multisender: React.FC = () => {
     const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
     const { network } = useNetwork(); // Use selectedNetwork from context
     const client = new SuiClient({ url: getFullnodeUrl(network) });
+
+    const multisenderAddress = network === 'mainnet'
+        ? import.meta.env.VITE_MAINNET_MULTISENDER_ADDRESS
+        : import.meta.env.VITE_TESTNET_MULTISENDER_ADDRESS;
+
     const [recipients, setRecipients] = useState<string[]>([""]);
     const [amounts, setAmounts] = useState<number[]>([0]);
     const [inputValues, setInputValues] = useState<string[]>([""]);
@@ -233,10 +236,9 @@ const Multisender: React.FC = () => {
                 }
 
                 // Create a move call for each coin object
-				// 0xdd2844cb4f7e5dfa9f4e4dd83f75af9e1ad5a5009c12f70c3d751f1e57ecf3b3 Testnet multisender contract
                 for (let coin of coinObjects) {
                     txBlock.moveCall({
-                        target: "0xae62f9ca39f68b154dd93ff20d7d7bb612bf31d345491ec84d6d350d29e41a1c::multisender::entry_send_to_multiple",
+                        target: `${multisenderAddress}::multisender::entry_send_to_multiple`,
                         arguments: [
                             txBlock.object(coin.coinObjectId),
                             txBlock.pure([recipient], "vector<address>"),
@@ -266,14 +268,14 @@ const Multisender: React.FC = () => {
                     showEffects: true,
                 },
                 timeout: 60000,
-				pollInterval: 2000, // Poll every 2 seconds
+                pollInterval: 2000, // Poll every 2 seconds
             });
 
             console.log("Transaction effects:", transaction);
             toast.success("Tokens sent successfully!");
         } catch (e) {
             console.error("Transaction error:", e);
-            toast.error("Failed to send tokens.");
+            toast.error(`Failed to send tokens: ${(e as Error).message}`);
         }
     };
 

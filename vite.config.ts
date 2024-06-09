@@ -1,8 +1,7 @@
-import path from 'path'
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react-swc'
+import path from 'path';
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -11,6 +10,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000, // Change the port to 3000
+    port: 3000,
   },
-})
+  build: {
+    outDir: 'build',
+    sourcemap: false, // Disable sourcemaps in production
+  }
+});

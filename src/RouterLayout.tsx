@@ -7,6 +7,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { WalletProvider } from "@mysten/dapp-kit";
 import Providers from '@/context/Providers'; // Assuming the context provider is in this path
+import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
+
 
 export const metadata: Metadata = {
   title: 'Create Next App',
@@ -28,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Providers>
             <WalletProvider>
               <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+              <ToastContainer />
                 {children}
                 <Toaster />
               </ThemeProvider>

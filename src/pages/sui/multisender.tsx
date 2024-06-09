@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { UserNav } from '@/components/user-nav';
 import "react-toastify/dist/ReactToastify.css";
 import { Layout, LayoutHeader } from '@/components/custom/layout';
@@ -14,6 +14,7 @@ import Sidebar2 from "../../components/sidebar";
 import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TransactionBlock } from "@mysten/sui.js/transactions";
 import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
+import RecentTransactions from "../../components/RecentTransactions";
 
 interface CoinBalance {
     coinType: string;
@@ -51,6 +52,7 @@ const Multisender: React.FC = () => {
     const [csvUploaded, setCsvUploaded] = useState<boolean>(false); // State to track CSV upload
     const [fileName, setFileName] = useState<string | null>(null);
     const [digest, setDigest] = useState("");
+    const [triggerFetch, setTriggerFetch] = useState(false); // State to trigger fetch
 
     useEffect(() => {
         if (currentAccount) {
@@ -273,6 +275,7 @@ const Multisender: React.FC = () => {
 
             console.log("Transaction effects:", transaction);
             toast.success("Tokens sent successfully!");
+            setTriggerFetch(prev => !prev); // Trigger the fetch in RecentTransactions
         } catch (e) {
             console.error("Transaction error:", e);
             toast.error(`Failed to send tokens: ${(e as Error).message}`);
@@ -293,9 +296,9 @@ const Multisender: React.FC = () => {
                 />
                 <div className='flex-1'>
                     <div className='container mx-auto p-4 text-white'>
-                        <ToastContainer />
-                        <div className='flex justify-center items-center min-h-screen'>
-                            <div className='rounded-lg shadow-lg p-6 w-full max-w-md'>
+                       
+                        <div className='flex justify-center items-center '>
+                            <div className='rounded-lg shadow-lg p-6 w-full max-w-xl'>
                                 <h2 className='text-2xl font-semibold mb-4 text-center'>
                                     Send Coins to Multiple Recipients
                                 </h2>
@@ -394,6 +397,9 @@ const Multisender: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+            <div className="container">
+            <RecentTransactions triggerFetch={triggerFetch} />
             </div>
         </Layout>
     );

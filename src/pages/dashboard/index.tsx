@@ -16,7 +16,7 @@ import { Overview } from './components/overview';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useNetwork } from '../../components/NetworkContext';
-import RecentTransactions from '@/components/RecentTransactions';
+// import RecentTransactions from '@/components/RecentTransactions';
 export default function Dashboard() {
   const currentAccount = useCurrentAccount();
   const { network } = useNetwork(); // Use selectedNetwork from context
@@ -284,7 +284,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-            <RecentTransactions />
+           
           </TabsContent>
         </Tabs>
       </LayoutBody>

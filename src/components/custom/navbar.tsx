@@ -5,7 +5,7 @@
  */
 import { Button } from "@/components/ui/button"
 import { SheetTrigger, SheetContent, Sheet } from "@/components/ui/sheet"
-import Link from "next/link"
+// import Link from "next/link"
 import { JSX, SVGProps } from "react"
 // import { ConnectButton } from '@mysten/dapp-kit';
 import '@mysten/dapp-kit/dist/index.css';
@@ -22,51 +22,51 @@ export default function Navbar() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left">
-          <Link className="mr-6 hidden lg:flex" href="#">
+          <a className="mr-6 hidden lg:flex" href="#">
             <MountainIcon className="h-6 w-6" />
             <span className="sr-only">Artfi Vesting</span>
-          </Link>
+          </a>
           <div className="grid gap-2 py-6">
-            <Link className="flex w-full items-center py-2 text-lg font-semibold" href="/">
+            <a className="flex w-full items-center py-2 text-lg font-semibold" href="/">
               Claim ArtFi
-            </Link>
-            <Link className="flex w-full items-center py-2 text-lg font-semibold" href="/create">
+            </a>
+            <a className="flex w-full items-center py-2 text-lg font-semibold" href="/create">
               Create
-            </Link>
-            <Link
+            </a>
+            <a
           className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
           href="admin"
         >
           All Wallets
-        </Link>
+        </a>
             
             <div><ConnectButton /></div>
           </div>
         </SheetContent>
       </Sheet>
-      <Link className="mr-6 hidden lg:flex" href="#">
+      <a className="mr-6 hidden lg:flex" href="#">
         <MountainIcon className="h-6 w-6" />
         <span className="sr-only">Acme Inc</span>
-      </Link>
+      </a>
       <nav className="ml-auto hidden lg:flex gap-6">
-        <Link
+        <a
           className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
           href="/"
         >
           Claim ArtFi
-        </Link>
-        <Link
+        </a>
+        <a
           className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
           href="create"
         >
           Create
-        </Link>
-        <Link
+        </a>
+        <a
           className="group inline-flex h-9 w-max items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-gray-100/50 data-[state=open]:bg-gray-100/50 dark:bg-gray-950 dark:hover:bg-gray-800 dark:hover:text-gray-50 dark:focus:bg-gray-800 dark:focus:text-gray-50 dark:data-[active]:bg-gray-800/50 dark:data-[state=open]:bg-gray-800/50"
           href="admin"
         >
           All Wallets
-        </Link>
+        </a>
             
       
         <div><ConnectButton /></div>

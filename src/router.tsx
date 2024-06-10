@@ -41,12 +41,12 @@ const router = createBrowserRouter([
       Component: (await import('@/components/coming-soon')).default,
     }),
   },
-  {
-    path: '/allvestings',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/allvestings')).default,
-    }),
-  },
+  // {
+  //   path: '/allvestings',
+  //   lazy: async () => ({
+  //     Component: (await import('./pages/sui/allvestings')).default,
+  //   }),
+  // },
   {
     path: '/multisender',
     lazy: async () => ({

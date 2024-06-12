@@ -23,6 +23,8 @@ interface CoinBalance {
     lockedBalance: Record<string, string>;
 }
 
+const BATCH_SIZE = 50; // Define a batch size that is manageable based on your gas and block size limits
+
 const Multisender: React.FC = () => {
     const currentAccount = useCurrentAccount();
     const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
@@ -197,83 +199,89 @@ const Multisender: React.FC = () => {
 
             const scaledAmounts = amounts.map(amount => BigInt(amount * Math.pow(10, selectedCoinDecimals)));
 
-            const txBlock = new TransactionBlock();
-            txBlock.setGasBudget(100000000); // Ensure you have enough gas budget
+            for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+                const batchRecipients = recipients.slice(i, i + BATCH_SIZE);
+                const batchAmounts = scaledAmounts.slice(i, i + BATCH_SIZE);
 
-            for (let i = 0; i < recipients.length; i++) {
-                const recipient = recipients[i];
-                const amount = scaledAmounts[i];
+                const txBlock = new TransactionBlock();
+                txBlock.setGasBudget(1000000000); // Ensure you have enough gas budget
 
-                // Fetch enough coin objects to cover the amount
-                let remainingAmount = amount;
-                let coinObjects = [];
-                let cursor = null;
+                for (let j = 0; j < batchRecipients.length; j++) {
+                    const recipient = batchRecipients[j];
+                    const amount = batchAmounts[j];
 
-                while (remainingAmount > 0) {
-                    const result = await client.getCoins({
-                        owner: currentAccount.address,
-                        coinType: selectedCoinType,
-                        limit: 50,
-                        cursor: cursor,
-                    });
+                    // Fetch enough coin objects to cover the amount
+                    let remainingAmount = amount;
+                    let coinObjects = [];
+                    let cursor = null;
 
-                    for (let coin of result.data) {
-                        const coinBalance = BigInt(coin.balance);
+                    while (remainingAmount > 0) {
+                        const result = await client.getCoins({
+                            owner: currentAccount.address,
+                            coinType: selectedCoinType,
+                            limit: 50,
+                            cursor: cursor,
+                        });
 
-                        if (coinBalance >= remainingAmount) {
-                            coinObjects.push({ coinObjectId: coin.coinObjectId, amount: remainingAmount });
-                            remainingAmount = 0n;
-                            break;
-                        } else {
-                            coinObjects.push({ coinObjectId: coin.coinObjectId, amount: coinBalance });
-                            remainingAmount -= coinBalance;
+                        for (let coin of result.data) {
+                            const coinBalance = BigInt(coin.balance);
+
+                            if (coinBalance >= remainingAmount) {
+                                coinObjects.push({ coinObjectId: coin.coinObjectId, amount: remainingAmount });
+                                remainingAmount = 0n;
+                                break;
+                            } else {
+                                coinObjects.push({ coinObjectId: coin.coinObjectId, amount: coinBalance });
+                                remainingAmount -= coinBalance;
+                            }
+                        }
+
+                        cursor = result.nextCursor;
+
+                        if (!result.hasNextPage && remainingAmount > 0) {
+                            throw new Error("Insufficient balance to complete the transaction");
                         }
                     }
 
-                    cursor = result.nextCursor;
-
-                    if (!result.hasNextPage && remainingAmount > 0) {
-                        throw new Error("Insufficient balance to complete the transaction");
+                    // Create a move call for each coin object
+                    for (let coin of coinObjects) {
+                        txBlock.moveCall({
+                            target: `${multisenderAddress}::multisender::entry_send_to_multiple`,
+                            arguments: [
+                                txBlock.object(coin.coinObjectId),
+                                txBlock.pure([recipient], "vector<address>"),
+                                txBlock.pure([coin.amount], "vector<u64>"),
+                            ],
+                            typeArguments: [selectedCoinType],
+                        });
                     }
                 }
 
-                // Create a move call for each coin object
-                for (let coin of coinObjects) {
-                    txBlock.moveCall({
-                        target: `${multisenderAddress}::multisender::entry_send_to_multiple`,
-                        arguments: [
-                            txBlock.object(coin.coinObjectId),
-                            txBlock.pure([recipient], "vector<address>"),
-                            txBlock.pure([coin.amount], "vector<u64>"),
-                        ],
-                        typeArguments: [selectedCoinType],
-                    });
-                }
+                const result = await signAndExecuteTransactionBlock.mutateAsync({
+                    transactionBlock: txBlock,
+                    options: {
+                        showObjectChanges: false,
+                        showEffects: false,
+                    },
+                    requestType: "WaitForLocalExecution",
+                });
+
+                console.log("Transaction result:", result);
+                setDigest(result.digest);
+
+                // Wait for the transaction to be processed and confirmed
+                const transaction = await client.waitForTransactionBlock({
+                    digest: result.digest,
+                    options: {
+                        showEffects: true,
+                    },
+                    timeout: 60000,
+                    pollInterval: 2000, // Poll every 2 seconds
+                });
+
+                console.log("Transaction effects:", transaction);
             }
 
-            const result = await signAndExecuteTransactionBlock.mutateAsync({
-                transactionBlock: txBlock,
-                options: {
-                    showObjectChanges: true,
-                    showEffects: true,
-                },
-                requestType: "WaitForLocalExecution",
-            });
-
-            console.log("Transaction result:", result);
-            setDigest(result.digest);
-
-            // Wait for the transaction to be processed and confirmed
-            const transaction = await client.waitForTransactionBlock({
-                digest: result.digest,
-                options: {
-                    showEffects: true,
-                },
-                timeout: 60000,
-                pollInterval: 2000, // Poll every 2 seconds
-            });
-
-            console.log("Transaction effects:", transaction);
             toast.success("Tokens sent successfully!");
             setTriggerFetch(prev => !prev); // Trigger the fetch in RecentTransactions
         } catch (e) {

@@ -54,6 +54,12 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/createstaking',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/createstaking')).default,
+    }),
+  },
+  {
     path: '/forgot-password',
     lazy: async () => ({
       Component: (await import('./pages/auth/forgot-password')).default,

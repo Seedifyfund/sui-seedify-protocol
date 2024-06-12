@@ -52,7 +52,7 @@ export const sidelinks: SideLink[] = [
   {
     title: 'Create Staking',
     label: '',
-    href: '/coming-soon',
+    href: '/createstaking',
     icon: <IconApps size={18} />,
   },
   {

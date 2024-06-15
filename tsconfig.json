@@ -32,7 +32,7 @@
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }],
   "exclude": [
-    "node_modules",
-    "node_modules/@mysten/bcs/dist"
+    "node_modules"
+    
   ]
 }

@@ -54,6 +54,12 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/addressvalidator',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/addressvalidator')).default,
+    }),
+  },
+  {
     path: '/createstaking',
     lazy: async () => ({
       Component: (await import('./pages/sui/createstaking')).default,

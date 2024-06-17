@@ -15,7 +15,7 @@ import { Select, SelectItem, SelectContent, SelectTrigger, SelectValue } from "@
 import { TransactionBlock } from "@mysten/sui.js/transactions";
 import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
 import RecentTransactions from "../../components/RecentTransactions";
-import InvalidAddressModal from "../../components/custom/InvalidAddressModal"
+
 interface CoinBalance {
     coinType: string;
     totalBalance: string;
@@ -53,11 +53,8 @@ const Multisender: React.FC = () => {
     const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0);
     const [csvUploaded, setCsvUploaded] = useState<boolean>(false); // State to track CSV upload
     const [fileName, setFileName] = useState<string | null>(null);
-    const [digest, setDigest] = useState<string>("");
-    const [triggerFetch, setTriggerFetch] = useState<boolean>(false); // State to trigger fetch
-    const [invalidAddresses, setInvalidAddresses] = useState<string[]>([]); // State for invalid addresses
-    const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // State for modal visibility
-
+    const [digest, setDigest] = useState("");
+    const [triggerFetch, setTriggerFetch] = useState(false); // State to trigger fetch
 
     useEffect(() => {
         if (currentAccount) {
@@ -181,80 +178,43 @@ const Multisender: React.FC = () => {
         setInputValues(updatedInputValues);
     };
 
-    const validateAddress = (address: string): boolean => {
-        // Add address validation logic specific to your blockchain
-        const regex = /^0x[a-fA-F0-9]{64}$/; // regex for Sui addresses
-        return regex.test(address);
-    };
-
-    const downloadReceipt = (transactionDetails: { recipient: string, amount: string, tokenName: string }[]) => {
-        const csvContent = "data:text/csv;charset=utf-8,Recipient Address,Amount,Token Name\n" +
-            transactionDetails.map(detail => `${detail.recipient},${detail.amount},${detail.tokenName}`).join("\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "transaction_receipt.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    
-
     const sendToMultiple = async () => {
         if (!currentAccount) {
             toast.error("Please connect the wallet first");
             return;
         }
-    
+
         if (!selectedCoin) {
             toast.error("Token object ID is required");
             return;
         }
-    
+
         if (recipients.length === 0 || amounts.length === 0) {
             toast.error("Recipients and amounts are required");
             return;
         }
-    
-        const invalidRecipients = recipients.filter(recipient => !validateAddress(recipient));
-        const validRecipients = recipients.filter(recipient => validateAddress(recipient));
-        const validAmounts = amounts.filter((_, index) => validateAddress(recipients[index]));
-    
-        if (invalidRecipients.length > 0) {
-            setInvalidAddresses(invalidRecipients);
-            setIsModalOpen(true);
-        }
-    
-        if (validRecipients.length === 0) {
-            toast.error("No valid recipient addresses to send tokens to.");
-            return;
-        }
-    
+
         try {
-            toast.info("Wait for the Transaction to Start...");
-            toast.info("There will be 50 Transactions in each Batch...");
-    
-            const scaledAmounts = validAmounts.map(amount => BigInt(amount * Math.pow(10, selectedCoinDecimals)));
-            const transactionDetails = []; // Collect transaction details
-    
-            for (let i = 0; i < validRecipients.length; i += BATCH_SIZE) {
-                const batchRecipients = validRecipients.slice(i, i + BATCH_SIZE);
+            toast.info("Sending tokens...");
+
+            const scaledAmounts = amounts.map(amount => BigInt(amount * Math.pow(10, selectedCoinDecimals)));
+
+            for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+                const batchRecipients = recipients.slice(i, i + BATCH_SIZE);
                 const batchAmounts = scaledAmounts.slice(i, i + BATCH_SIZE);
-    
-                // Reinitialize the transaction block for each batch
+
                 const txBlock = new TransactionBlock();
                 txBlock.setGasBudget(1000000000); // Ensure you have enough gas budget
-    
+
                 for (let j = 0; j < batchRecipients.length; j++) {
                     const recipient = batchRecipients[j];
                     const amount = batchAmounts[j];
-    
+
                     // Fetch enough coin objects to cover the amount
                     let remainingAmount = amount;
                     let coinObjects = [];
                     let cursor = null;
-    
+
                     while (remainingAmount > 0) {
                         const result = await client.getCoins({
                             owner: currentAccount.address,
@@ -262,10 +222,10 @@ const Multisender: React.FC = () => {
                             limit: 50,
                             cursor: cursor,
                         });
-    
+
                         for (let coin of result.data) {
                             const coinBalance = BigInt(coin.balance);
-    
+
                             if (coinBalance >= remainingAmount) {
                                 coinObjects.push({ coinObjectId: coin.coinObjectId, amount: remainingAmount });
                                 remainingAmount = 0n;
@@ -275,14 +235,14 @@ const Multisender: React.FC = () => {
                                 remainingAmount -= coinBalance;
                             }
                         }
-    
+
                         cursor = result.nextCursor;
-    
+
                         if (!result.hasNextPage && remainingAmount > 0) {
                             throw new Error("Insufficient balance to complete the transaction");
                         }
                     }
-    
+
                     // Create a move call for each coin object
                     for (let coin of coinObjects) {
                         txBlock.moveCall({
@@ -295,15 +255,8 @@ const Multisender: React.FC = () => {
                             typeArguments: [selectedCoinType],
                         });
                     }
-    
-                    // Collect transaction details
-                    transactionDetails.push({
-                        recipient: recipient,
-                        amount: amount.toString(),
-                        tokenName: coins.find(coin => coin.coinObjectId === selectedCoin)?.coinName || "Unknown",
-                    });
                 }
-    
+
                 const result = await signAndExecuteTransactionBlock.mutateAsync({
                     transactionBlock: txBlock,
                     options: {
@@ -312,10 +265,10 @@ const Multisender: React.FC = () => {
                     },
                     requestType: "WaitForLocalExecution",
                 });
-    
+
                 console.log("Transaction result:", result);
                 setDigest(result.digest);
-    
+
                 // Wait for the transaction to be processed and confirmed
                 const transaction = await client.waitForTransactionBlock({
                     digest: result.digest,
@@ -325,22 +278,17 @@ const Multisender: React.FC = () => {
                     timeout: 60000,
                     pollInterval: 2000, // Poll every 2 seconds
                 });
-    
+
                 console.log("Transaction effects:", transaction);
             }
-    
+
             toast.success("Tokens sent successfully!");
             setTriggerFetch(prev => !prev); // Trigger the fetch in RecentTransactions
-    
-            // Trigger download of receipt
-            downloadReceipt(transactionDetails);
         } catch (e) {
             console.error("Transaction error:", e);
             toast.error(`Failed to send tokens: ${(e as Error).message}`);
         }
     };
-    
-    
 
     return (
         <Layout>
@@ -461,11 +409,6 @@ const Multisender: React.FC = () => {
             <div className="container">
             <RecentTransactions triggerFetch={triggerFetch} />
             </div>
-            <InvalidAddressModal 
-            open={isModalOpen} 
-            onClose={() => setIsModalOpen(false)} 
-            invalidAddresses={invalidAddresses} 
-        />
         </Layout>
     );
 };

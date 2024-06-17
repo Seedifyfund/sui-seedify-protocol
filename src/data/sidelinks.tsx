@@ -50,6 +50,12 @@ export const sidelinks: SideLink[] = [
     icon: <IconApps size={18} />,
   },
   {
+    title: 'Check SUI Addresses',
+    label: '',
+    href: '/addressvalidator',
+    icon: <IconApps size={18} />,
+  },
+  {
     title: 'Create Staking',
     label: '',
     href: '/createstaking',

@@ -58,7 +58,7 @@ const AddressValidator: React.FC = () => {
     return (
         <div className="container mx-auto p-4 h-screen sm:pt-48 pt-10">
             <h2 className="text-2xl font-semibold mb-4 text-center">
-                Sui Address Validator
+                SUI ADDRESS VALIDATOR
             </h2>
             <div className="mb-4">
                 <label className="block mb-2">
@@ -66,7 +66,7 @@ const AddressValidator: React.FC = () => {
                 </label>
                 <textarea
                     onChange={handleAddressChange}
-                    className="w-full p-2 border  rounded-md bg-gradient-to-r from-cyan-50 to-cyan-100"
+                    className="w-full p-2 border  rounded-md bg-slate-900"
                     rows={10}
                     placeholder="0x1234...&#10;0x5678..."
                 ></textarea>
@@ -84,7 +84,7 @@ const AddressValidator: React.FC = () => {
             </div>
             <Button
                 onClick={validateAddresses}
-                className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-700"
+                className="w-full bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-500"
             >
                 Validate Addresses
             </Button>

@@ -100,7 +100,7 @@ interface CoinBalance {
 // }
 
 const Create: React.FC = () => {
-	// const api = "http://localhost:8000/api";
+	const api = "http://localhost:8000/api";
 	// console.log(api)
 	const currentAccount = useCurrentAccount();
 	const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
@@ -132,7 +132,7 @@ const Create: React.FC = () => {
 			totalBalance: string;
 		}[]
 	>([]);
-	const [selectedCoin, setSelectedCoin] = useState<string>("");
+	const [, setSelectedCoin] = useState("");
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 
 	const { network } = useNetwork(); // Use selectedNetwork from context
@@ -246,7 +246,7 @@ const Create: React.FC = () => {
 			toast.error("Please connect the wallet first");
 			return;
 		}
-	
+
 		const {
 			startDate,
 			startHour,
@@ -264,21 +264,21 @@ const Create: React.FC = () => {
 		} = data;
 		console.log(investorName);
 		console.log("Form data:", data);
-	
+
 		if (!startDate) {
 			console.error("Start date is not set");
 			return;
 		}
-	
+
 		const startHour24 = convertTo24HourFormat(startHour, startPeriod);
 		startDate.setHours(startHour24, startMinute, 0, 0);
 		const startTimeMs = startDate.getTime();
-	
+
 		if (startTimeMs < Date.now()) {
 			console.error("Start time is in the past");
 			return;
 		}
-	
+
 		const scaledAmount = BigInt(amount * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
 		const scaledDuration = BigInt(
 			convertToMilliseconds(duration, durationUnit)
@@ -287,31 +287,17 @@ const Create: React.FC = () => {
 			convertToMilliseconds(claimInterval, claimIntervalUnit)
 		);
 		const startTimeMsBigInt = BigInt(startTimeMs);
-	
+
 		const txBlock = new TransactionBlock();
 		txBlock.setGasBudget(10000000);
-	
-		// Fetch the token coin details
-		const tokenDetails = await fetchCoinDetails(coin);
-		console.log("Token coin details:", tokenDetails);
-		if (
-			!tokenDetails ||
-			!tokenDetails.objectId ||
-			!tokenDetails.version ||
-			!tokenDetails.digest
-		) {
-			console.error("Invalid token coin data:", tokenDetails);
-			return;
-		}
-	
-		// Find a different coin to use for gas payment
+
 		const gasCoin = coins.find((c) => c.coinObjectId !== coin);
 		console.log("Selected gas coin:", gasCoin);
 		if (!gasCoin) {
 			console.error("No valid gas coin found");
 			return;
 		}
-	
+
 		const gasCoinDetails = await fetchCoinDetails(gasCoin.coinObjectId);
 		console.log("Gas coin details:", gasCoinDetails);
 		if (
@@ -323,16 +309,25 @@ const Create: React.FC = () => {
 			console.error("Invalid gas coin data:", gasCoinDetails);
 			return;
 		}
-	
-		console.log("Setting gas payment with:", {
-			objectId: gasCoinDetails.objectId,
-			version: gasCoinDetails.version,
-			digest: gasCoinDetails.digest,
-		});
-		txBlock.setGasPayment([
-			{ objectId: gasCoinDetails.objectId, version: gasCoinDetails.version, digest: gasCoinDetails.digest },
-		]);
-	
+
+		const {
+			objectId: gasObjectId,
+			version: gasVersion,
+			digest: gasDigest,
+		} = gasCoinDetails;
+
+		const tokenDetails = await fetchCoinDetails(coin);
+		console.log("Token coin details:", tokenDetails);
+		if (
+			!tokenDetails ||
+			!tokenDetails.objectId ||
+			!tokenDetails.version ||
+			!tokenDetails.digest
+		) {
+			console.error("Invalid token coin data:", tokenDetails);
+			return;
+		}
+
 		const selectedCoinType = coins.find(
 			(c) => c.coinObjectId === coin
 		)?.coinType;
@@ -341,9 +336,20 @@ const Create: React.FC = () => {
 			console.error("Selected coin type not found");
 			return;
 		}
-	
+
+		console.log("Coin object ID:", coin);
+
+		console.log("Setting gas payment with:", {
+			objectId: gasObjectId,
+			version: gasVersion,
+			digest: gasDigest,
+		});
+		txBlock.setGasPayment([
+		  { objectId: gasObjectId, version: gasVersion, digest: gasDigest },
+		]);
+
 		// 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
-		txBlock.setGasBudget(1000000000);
+		txBlock.setGasBudget(100000000);
 		txBlock.moveCall({
 			target: `${torqueProtocolAddress}::torqueprotocol::entry_new`,
 			arguments: [
@@ -360,37 +366,52 @@ const Create: React.FC = () => {
 			],
 			typeArguments: [selectedCoinType], // Add coinType to typeArguments
 		});
-	
+
 		try {
 			const result = await signAndExecuteTransactionBlock.mutateAsync({
 				transactionBlock: txBlock,
 				options: {
-					showObjectChanges: false,
-					showEffects: false,
+					showObjectChanges: true,
+					showEffects: true,
 				},
 				requestType: "WaitForLocalExecution",
 			});
 			console.log("Transaction result:", result);
 			setDigest(result.digest);
 			toast.success("Transaction successful!");
-	
-			// Wait for the transaction to be processed and confirmed
-			const transaction = await client.waitForTransactionBlock({
-				digest: result.digest,
-				options: {
-					showEffects: true,
-				},
-				timeout: 60000,
-				pollInterval: 2000, // Poll every 2 seconds
-			});
-		} catch (error) {
-			console.error("Transaction execution failed:", error);
-			toast.error("Transaction execution failed");
+
+			// API Call with Axios
+			try {
+				// await axios.get("/api/Vesting");
+				const response = await axios.post(
+					`${api}/vesting/createVesting`,
+					{
+						...data,
+						digest: result.digest,
+					},
+					{
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				);
+
+				const apiResult = response.data;
+				console.log("API response:", apiResult);
+
+				if (response.status === 200) {
+					console.log("API call succeeded:", apiResult.message);
+				} else {
+					console.error("API call failed:", apiResult.message);
+				}
+			} catch (apiError) {
+				console.error("API Error:", apiError);
+			}
+		} catch (e) {
+			console.error("Transaction error:", e);
+			toast.error("Transaction failed.");
 		}
 	};
-	
-	
-	
 
 	return (
 		<> <Layout><LayoutHeader>

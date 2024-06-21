@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add @types/mysten__sui.js
+  C:\Program Files\nodejs\node.exe C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add @mysten/bcs
 
 PATH: 
   C:\Program Files (x86)\Common Files\Intel\Shared Libraries\redist\intel64\compiler;C:\Python311\Scripts\;C:\Python311\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Users\WELCOME\AppData\Roaming\nvm;C:\Program Files\nodejs;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\nodejs\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Users\WELCOME\.cargo\bin;C:\Users\WELCOME\.local\share\solana\install\active_release\bin;C:\Users\WELCOME\AppData\Local\pnpm;C:\Users\WELCOME\AppData\Local\Microsoft\WindowsApps;C:\Users\WELCOME\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\WELCOME\AppData\Roaming\nvm;C:\Program Files\nodejs;E:\Softwares\flutter_windows_3.10.0-stable\flutter\bin;C:\Users\WELCOME\AppData\Roaming\npm;
@@ -14,17 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.npmjs.org/@types%2fmysten__sui.js: Not found
-      at params.callback [as _callback] (C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:66145:18)
-      at self.callback (C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:140890:22)
-      at Request.emit (node:events:518:28)
-      at Request.<anonymous> (C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:141862:10)
-      at Request.emit (node:events:518:28)
-      at IncomingMessage.<anonymous> (C:\Users\WELCOME\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:141784:12)
-      at Object.onceWrapper (node:events:632:28)
-      at IncomingMessage.emit (node:events:530:35)
-      at endReadableNT (node:internal/streams/readable:1696:12)
-      at process.processTicksAndRejections (node:internal/process/task_queues:82:21)
+  Error: EPERM: operation not permitted, unlink 'F:\Torque\torquedapp new\torquesui\node_modules\@esbuild\win32-x64\esbuild.exe'
 
 npm manifest: 
   {
@@ -1881,9 +1871,27 @@ Lockfile:
       superstruct "^1.0.3"
       tweetnacl "^1.0.3"
   
-  "@mysten/sui.js@0.54.1", "@mysten/sui.js@^0.54.1":
+  "@mysten/sui.js@0.54.1":
     version "0.54.1"
     resolved "https://registry.npmjs.org/@mysten/sui.js/-/sui.js-0.54.1.tgz"
+    integrity sha512-TSmGIX7U9O/uS9EKIQdv7/S69KTbBhMJVelXCafJE6IJw8iB9cN9uLu0+uklkBSDrbRmLSEY70jMr3uRFjReIg==
+    dependencies:
+      "@graphql-typed-document-node/core" "^3.2.0"
+      "@mysten/bcs" "0.11.1"
+      "@noble/curves" "^1.1.0"
+      "@noble/hashes" "^1.3.1"
+      "@scure/bip32" "^1.3.1"
+      "@scure/bip39" "^1.2.1"
+      "@suchipi/femver" "^1.0.0"
+      bech32 "^2.0.0"
+      gql.tada "^1.7.0"
+      graphql "^16.8.1"
+      superstruct "^1.0.3"
+      tweetnacl "^1.0.3"
+  
+  "@mysten/sui.js@^0.54.1":
+    version "0.54.1"
+    resolved "https://registry.yarnpkg.com/@mysten/sui.js/-/sui.js-0.54.1.tgz#27b6724dd30e0e81d50b47437cb206d0cec25f8b"
     integrity sha512-TSmGIX7U9O/uS9EKIQdv7/S69KTbBhMJVelXCafJE6IJw8iB9cN9uLu0+uklkBSDrbRmLSEY70jMr3uRFjReIg==
     dependencies:
       "@graphql-typed-document-node/core" "^3.2.0"

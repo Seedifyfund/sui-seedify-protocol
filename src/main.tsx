@@ -11,9 +11,15 @@ import { ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 
+
+
+
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <Providers ><React.StrictMode>
-     <WalletProvider>
+     <WalletProvider
+     
+     >
      <ToastContainer />
     <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
       <RouterProvider router={router} />

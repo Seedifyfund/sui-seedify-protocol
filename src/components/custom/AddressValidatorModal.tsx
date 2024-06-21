@@ -4,17 +4,18 @@ interface InvalidAddressModalProps {
     open: boolean;
     onClose: () => void;
     invalidAddresses: string[];
+    validAddresses: string[];
 }
 
-const AddressValidatorModal: React.FC<InvalidAddressModalProps> = ({ open, onClose, invalidAddresses }) => {
+const AddressValidatorModal: React.FC<InvalidAddressModalProps> = ({ open, onClose, invalidAddresses, validAddresses }) => {
     if (!open) return null;
 
-    const downloadCSV = () => {
-        const csvContent = "data:text/csv;charset=utf-8," + invalidAddresses.join("\n");
+    const downloadCSV = (filename: string, addresses: string[]) => {
+        const csvContent = "data:text/csv;charset=utf-8," + addresses.join("\n");
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "invalid_addresses.csv");
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -40,15 +41,22 @@ const AddressValidatorModal: React.FC<InvalidAddressModalProps> = ({ open, onClo
                         Close
                     </button>
                     <button 
-                        onClick={downloadCSV} 
+                        onClick={() => downloadCSV("InvalidAddresses.csv", invalidAddresses)} 
+                        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-400"
+                    >
+                        Download Invalid Addresses CSV
+                    </button>
+                    <button 
+                        onClick={() => downloadCSV("ValidAddresses.csv", validAddresses)} 
                         className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-400"
                     >
-                        Download CSV
+                        Download Valid Addresses CSV
                     </button>
                 </div>
             </div>
         </div>
     );
 };
+
 
 export default AddressValidatorModal;

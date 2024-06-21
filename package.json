@@ -15,7 +15,6 @@
     "@headlessui/react": "^2.0.4",
     "@heroicons/react": "^2.1.3",
     "@hookform/resolvers": "^3.4.2",
-    "@mysten/bcs": "^0.11.1",
     "@mysten/dapp-kit": "^0.13.2",
     "@mysten/sui.js": "^0.54.1",
     "@mysten/wallet-adapter-react": "^11.0.0",

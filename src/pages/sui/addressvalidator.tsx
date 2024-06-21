@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import AddressValidatorModal from "../../components/custom/AddressValidatorModal";
+import Sidebar2 from "../../components/sidebar";
+import { Layout, LayoutHeader } from '@/components/custom/layout';
+import { UserNav } from "@/components/user-nav";
 
-// Utility function to validate Sui addresses
 // Utility function to validate Sui addresses
 const validateAddress = (address: string): boolean => {
     const trimmedAddress = address.trim();
@@ -27,7 +29,7 @@ const AddressValidator: React.FC = () => {
     const [validAddresses, setValidAddresses] = useState<string[]>([]);
     const [invalidAddresses, setInvalidAddresses] = useState<string[]>([]);
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
+    const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
     const handleAddressChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setAddresses(event.target.value.split("\n").map(addr => addr.trim()));
     };
@@ -55,10 +57,19 @@ const AddressValidator: React.FC = () => {
         }
     };
 
-    return (
-        <div className="container mx-auto p-4 h-screen sm:pt-48 pt-10">
+    return (<><Layout><LayoutHeader>
+		<div className='ml-auto flex items-center space-x-4'>
+			<UserNav />
+		</div>
+	</LayoutHeader>
+            <div className='flex'></div>
+				<Sidebar2
+					isCollapsed={isCollapsed}
+					setIsCollapsed={setIsCollapsed}
+				/>
+        <div className="container mx-auto p-4  sm:mt-40 mt-10 sm:px-12 px-4">
             <h2 className="text-2xl font-semibold mb-4 text-center">
-                SUI ADDRESS VALIDATOR
+                Sui Address Checker
             </h2>
             <div className="mb-4">
                 <label className="block mb-2">
@@ -66,14 +77,14 @@ const AddressValidator: React.FC = () => {
                 </label>
                 <textarea
                     onChange={handleAddressChange}
-                    className="w-full p-2 border  rounded-md bg-slate-900"
+                    className="w-full p-2 border rounded bg-slate-900"
                     rows={10}
                     placeholder="0x1234...&#10;0x5678..."
                 ></textarea>
             </div>
             <div className="mb-4">
                 <label className="block mb-2">
-                    Or Upload CSV File (one address per row)
+                    Or Upload CSV File (One Address in each Row)
                 </label>
                 <input
                     type="file"
@@ -84,7 +95,7 @@ const AddressValidator: React.FC = () => {
             </div>
             <Button
                 onClick={validateAddresses}
-                className="w-full bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-500"
+                className="w-full bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-400"
             >
                 Validate Addresses
             </Button>
@@ -106,8 +117,9 @@ const AddressValidator: React.FC = () => {
                 open={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
                 invalidAddresses={invalidAddresses} 
+                validAddresses={validAddresses} 
             />
-        </div>
+        </div></Layout></>
     );
 };
 

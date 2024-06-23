@@ -132,7 +132,7 @@ const Create: React.FC = () => {
 			totalBalance: string;
 		}[]
 	>([]);
-	const [, setSelectedCoin] = useState("");
+	const [selectedCoin, setSelectedCoin] = useState("");
 	const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
 
 	const { network } = useNetwork(); // Use selectedNetwork from context
@@ -148,6 +148,13 @@ const Create: React.FC = () => {
             fetchBalances(currentAccount.address);
         }
     }, [currentAccount, network]); // Include selectedNetwork in the dependency array
+
+	// Log the selected coin to verify it's set correctly
+useEffect(() => {
+	console.log("Selected coin:", selectedCoin);
+  }, [selectedCoin]);
+
+
 
 	const fetchBalances = async (ownerAddress: string) => {
 		try {
@@ -229,189 +236,150 @@ const Create: React.FC = () => {
 
 	const fetchCoinDetails = async (objectId: string) => {
 		try {
-			console.log(
-				`Fetching details for coin with object ID: ${objectId}`
-			);
-			const response = await client.getObject({ id: objectId });
-			console.log(`Fetched coin details:`, response.data);
-			return response.data;
+		  console.log(`Fetching details for coin with object ID: ${objectId}`);
+		  const response = await client.getObject({ id: objectId });
+		  console.log(`Fetched coin details:`, response.data);
+		  return response.data;
 		} catch (e) {
-			console.error("Failed to fetch coin details:", e);
-			return null;
+		  console.error("Failed to fetch coin details:", e);
+		  return null;
 		}
-	};
+	  };
+	  
 
-	const onSubmit = async (data: FormData) => {
+	  const onSubmit = async (data: FormData) => {
 		if (!currentAccount) {
-			toast.error("Please connect the wallet first");
-			return;
+		  toast.error("Please connect the wallet first");
+		  return;
 		}
-
+	  
 		const {
-			startDate,
-			startHour,
-			startMinute,
-			startPeriod,
-			duration,
-			durationUnit,
-			claimInterval,
-			claimIntervalUnit,
-			receiver,
-			investorName,
-			amount,
-			transferPercentage,
-			coin,
+		  startDate,
+		  startHour,
+		  startMinute,
+		  startPeriod,
+		  duration,
+		  durationUnit,
+		  claimInterval,
+		  claimIntervalUnit,
+		  receiver,
+		  investorName,
+		  amount,
+		  transferPercentage,
 		} = data;
-		console.log(investorName);
+	  
 		console.log("Form data:", data);
-
+	  
 		if (!startDate) {
-			console.error("Start date is not set");
-			return;
+		  console.error("Start date is not set");
+		  return;
 		}
-
+	  
 		const startHour24 = convertTo24HourFormat(startHour, startPeriod);
 		startDate.setHours(startHour24, startMinute, 0, 0);
 		const startTimeMs = startDate.getTime();
-
+	  
 		if (startTimeMs < Date.now()) {
-			console.error("Start time is in the past");
-			return;
+		  console.error("Start time is in the past");
+		  return;
 		}
-
+	  
 		const scaledAmount = BigInt(amount * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
-		const scaledDuration = BigInt(
-			convertToMilliseconds(duration, durationUnit)
-		);
-		const scaledClaimInterval = BigInt(
-			convertToMilliseconds(claimInterval, claimIntervalUnit)
-		);
+		const scaledDuration = BigInt(convertToMilliseconds(duration, durationUnit));
+		const scaledClaimInterval = BigInt(convertToMilliseconds(claimInterval, claimIntervalUnit));
 		const startTimeMsBigInt = BigInt(startTimeMs);
-
+	  
 		const txBlock = new TransactionBlock();
 		txBlock.setGasBudget(10000000);
-
-		const gasCoin = coins.find((c) => c.coinObjectId !== coin);
-		console.log("Selected gas coin:", gasCoin);
-		if (!gasCoin) {
-			console.error("No valid gas coin found");
-			return;
-		}
-
-		const gasCoinDetails = await fetchCoinDetails(gasCoin.coinObjectId);
+	  
+		// Fetch details for the selected coin to be used as gas coin
+		const gasCoinDetails = await fetchCoinDetails(selectedCoin);
 		console.log("Gas coin details:", gasCoinDetails);
-		if (
-			!gasCoinDetails ||
-			!gasCoinDetails.objectId ||
-			!gasCoinDetails.version ||
-			!gasCoinDetails.digest
-		) {
-			console.error("Invalid gas coin data:", gasCoinDetails);
-			return;
+		if (!gasCoinDetails || !gasCoinDetails.objectId || !gasCoinDetails.version || !gasCoinDetails.digest) {
+		  console.error("Invalid gas coin data:", gasCoinDetails);
+		  return;
 		}
-
-		const {
-			objectId: gasObjectId,
-			version: gasVersion,
-			digest: gasDigest,
-		} = gasCoinDetails;
-
-		const tokenDetails = await fetchCoinDetails(coin);
-		console.log("Token coin details:", tokenDetails);
-		if (
-			!tokenDetails ||
-			!tokenDetails.objectId ||
-			!tokenDetails.version ||
-			!tokenDetails.digest
-		) {
-			console.error("Invalid token coin data:", tokenDetails);
-			return;
-		}
-
-		const selectedCoinType = coins.find(
-			(c) => c.coinObjectId === coin
-		)?.coinType;
+	  
+		const { objectId: gasObjectId, version: gasVersion, digest: gasDigest } = gasCoinDetails;
+	  
+		const selectedCoinType = coins.find((c) => c.coinObjectId === selectedCoin)?.coinType;
 		console.log("Selected coin type:", selectedCoinType);
 		if (!selectedCoinType) {
-			console.error("Selected coin type not found");
-			return;
+		  console.error("Selected coin type not found");
+		  return;
 		}
-
-		console.log("Coin object ID:", coin);
-
+	  
+		console.log("Coin object ID:", selectedCoin);
+	  
+		// Log all relevant details before setting gas payment
 		console.log("Setting gas payment with:", {
-			objectId: gasObjectId,
-			version: gasVersion,
-			digest: gasDigest,
+		  objectId: gasObjectId,
+		  version: gasVersion,
+		  digest: gasDigest,
 		});
-		txBlock.setGasPayment([
-		  { objectId: gasObjectId, version: gasVersion, digest: gasDigest },
-		]);
-
-		// 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
+	  
+		
+	  
 		txBlock.setGasBudget(100000000);
 		txBlock.moveCall({
-			target: `${torqueProtocolAddress}::torqueprotocol::entry_new`,
-			arguments: [
-				txBlock.object(coin), // Use the mutable coin object ID
-				txBlock.pure(scaledAmount, "u64"),
-				txBlock.pure(transferPercentage, "u64"),
-				txBlock.object(
-					"0x0000000000000000000000000000000000000000000000000000000000000006"
-				), // Assuming this is the Clock object
-				txBlock.pure(startTimeMsBigInt, "u64"),
-				txBlock.pure(scaledDuration, "u64"),
-				txBlock.pure(scaledClaimInterval, "u64"),
-				txBlock.pure(receiver, "address"),
-			],
-			typeArguments: [selectedCoinType], // Add coinType to typeArguments
+		  target: `${torqueProtocolAddress}::torqueprotocol::entry_new`,
+		  arguments: [
+			txBlock.object(selectedCoin), // Use the mutable coin object ID
+			txBlock.pure(scaledAmount, "u64"),
+			txBlock.pure(transferPercentage, "u64"),
+			txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Assuming this is the Clock object
+			txBlock.pure(startTimeMsBigInt, "u64"),
+			txBlock.pure(scaledDuration, "u64"),
+			txBlock.pure(scaledClaimInterval, "u64"),
+			txBlock.pure(receiver, "address"),
+		  ],
+		  typeArguments: [selectedCoinType],
 		});
-
+	  
 		try {
-			const result = await signAndExecuteTransactionBlock.mutateAsync({
-				transactionBlock: txBlock,
-				options: {
-					showObjectChanges: true,
-					showEffects: true,
+		  const result = await signAndExecuteTransactionBlock.mutateAsync({
+			transactionBlock: txBlock,
+			options: {
+			  showObjectChanges: true,
+			  showEffects: true,
+			},
+			requestType: "WaitForLocalExecution",
+		  });
+		  console.log("Transaction result:", result);
+		  setDigest(result.digest);
+		  toast.success("Transaction successful!");
+	  
+		  try {
+			const response = await axios.post(
+			  `${api}/vesting/createVesting`,
+			  {
+				...data,
+				digest: result.digest,
+			  },
+			  {
+				headers: {
+				  "Content-Type": "application/json",
 				},
-				requestType: "WaitForLocalExecution",
-			});
-			console.log("Transaction result:", result);
-			setDigest(result.digest);
-			toast.success("Transaction successful!");
-
-			// API Call with Axios
-			try {
-				// await axios.get("/api/Vesting");
-				const response = await axios.post(
-					`${api}/vesting/createVesting`,
-					{
-						...data,
-						digest: result.digest,
-					},
-					{
-						headers: {
-							"Content-Type": "application/json",
-						},
-					}
-				);
-
-				const apiResult = response.data;
-				console.log("API response:", apiResult);
-
-				if (response.status === 200) {
-					console.log("API call succeeded:", apiResult.message);
-				} else {
-					console.error("API call failed:", apiResult.message);
-				}
-			} catch (apiError) {
-				console.error("API Error:", apiError);
+			  }
+			);
+	  
+			const apiResult = response.data;
+			if (response.status === 200) {
+			  console.log("API call succeeded:", apiResult.message);
+			} else {
+			  console.error("API call failed:", apiResult.message);
 			}
+		  } catch (apiError) {
+			console.error("API Error:", apiError);
+		  }
 		} catch (e) {
-			console.error("Transaction error:", e);
-			toast.error("Transaction failed.");
+		  console.error("Transaction error:", e);
+		  toast.error("Transaction failed.");
 		}
-	};
+	  };
+	  
+	  
+
 
 	return (
 		<> <Layout><LayoutHeader>

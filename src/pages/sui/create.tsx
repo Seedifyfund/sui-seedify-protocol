@@ -318,7 +318,6 @@ useEffect(() => {
 		  digest: gasDigest,
 		});
 	  
-		
 	  
 		txBlock.setGasBudget(100000000);
 		txBlock.moveCall({

@@ -66,6 +66,12 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/stake',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/stake')).default,
+    }),
+  },
+  {
     path: '/forgot-password',
     lazy: async () => ({
       Component: (await import('./pages/auth/forgot-password')).default,

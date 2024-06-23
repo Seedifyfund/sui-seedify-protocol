@@ -62,6 +62,12 @@ export const sidelinks: SideLink[] = [
     icon: <IconApps size={18} />,
   },
   {
+    title: 'Stake & Earn',
+    label: '',
+    href: '/stake',
+    icon: <IconApps size={18} />,
+  },
+  {
     title: 'My Stakings',
     label: '',
     href: '/coming-soon',

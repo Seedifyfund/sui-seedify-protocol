@@ -4,6 +4,7 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 import {
     Form,
     FormControl,
@@ -30,35 +31,20 @@ import { useForm, Controller } from "react-hook-form";
 import "react-toastify/dist/ReactToastify.css";
 import { toast, ToastContainer } from "react-toastify";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon } from "lucide-react";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import axios from "axios";
 import Sidebar2 from "../../components/sidebar";
 import { useNetwork } from '../../components/NetworkContext'; // Adjust the path as necessary
 import { UserNav } from '@/components/user-nav';
 import { Layout, LayoutHeader } from '@/components/custom/layout';
 
 const formSchema = z.object({
-    dpr: z.preprocess((val) => Number(val), z.number().min(1, "DPR is required").max(10000, "DPR must be between 1 and 10000")),
-    startDate: z.date().nullable(), // allow null but required
-    duration: z.preprocess((val) => Number(val), z.number().min(1, "Duration is required")),
-    claimInterval: z.preprocess((val) => Number(val), z.number().min(1, "Claim Interval is required")),
     amount: z.preprocess((val) => Number(val), z.number().min(1, "Amount is required")),
+    stakingId: z.string().min(1, "Staking ID is required"),
     coin: z.string().min(1, "Coin is required"),
 });
 
 interface FormData {
-    dpr: number;
-    startDate: Date | null;
-    duration: number;
-    claimInterval: number;
     amount: number;
+    stakingId: string;
     coin: string;
 }
 
@@ -69,18 +55,15 @@ interface CoinBalance {
     lockedBalance: Record<string, string>;
 }
 
-const CreateStaking: React.FC = () => {
+const stake: React.FC = () => {
     const api = "http://localhost:8000/api";
     const currentAccount = useCurrentAccount();
     const signAndExecuteTransactionBlock = useSignAndExecuteTransactionBlock();
     const { control, handleSubmit, ...formMethods } = useForm<FormData>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            dpr: 0,
-            startDate: null,
-            duration: 1,
-            claimInterval: 1,
             amount: 1,
+            stakingId: "",
             coin: "",
         },
     });
@@ -194,31 +177,14 @@ const CreateStaking: React.FC = () => {
         }
 
         const {
-            dpr,
-            startDate,
-            duration,
-            claimInterval,
             amount,
+            stakingId,
             coin,
         } = data;
 
         console.log("Form data:", data);
 
-        if (!startDate) {
-            console.error("Start date is not set");
-            return;
-        }
-
-        const startTimeMs = startDate.getTime();
-
-        if (startTimeMs < Date.now()) {
-            console.error("Start time is in the past");
-            return;
-        }
-
         const scaledAmount = BigInt(amount * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
-        const scaledDuration = BigInt(duration * 24 * 60 * 60 * 1000); // Convert duration to milliseconds
-        const scaledClaimInterval = BigInt(claimInterval * 24 * 60 * 60 * 1000); // Convert claim interval to milliseconds
 
         const txBlock = new TransactionBlock();
         txBlock.setGasBudget(10000000);
@@ -245,13 +211,11 @@ const CreateStaking: React.FC = () => {
 
         txBlock.setGasBudget(100000000);
         txBlock.moveCall({
-            target: `${torqueStakingAddress}::torque_staking::create_staking`,
+            target: `${torqueStakingAddress}::torque_staking::stake_token`,
             arguments: [
-                txBlock.pure(dpr, "u64"),
                 txBlock.object(selectedCoin),
                 txBlock.pure(scaledAmount, "u64"),
-                txBlock.pure(scaledDuration, "u64"),
-                txBlock.pure(scaledClaimInterval, "u64"),
+                txBlock.object(stakingId),
                 txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Assuming this is the Clock object
             ],
             typeArguments: [selectedCoinType],
@@ -272,16 +236,12 @@ const CreateStaking: React.FC = () => {
 
             try {
                 const response = await axios.post(
-                    `${api}/staking/createStaking`,
+                    `${api}/staking/stakeToken`,
                     {
                         ...data,
                         digest: result.digest,
                     },
-                    {
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    }
+                   
                 );
 
                 const apiResult = response.data;
@@ -317,7 +277,7 @@ const CreateStaking: React.FC = () => {
                         <div className='flex justify-center items-center min-h-screen'>
                             <div className=' rounded-lg shadow-lg p-6 w-full max-w-md'>
                                 <h2 className='text-2xl font-semibold mb-4 text-center'>
-                                    CREATE STAKING
+                                    STAKE TOKENS
                                 </h2>
                                 <Form
                                     {...formMethods}
@@ -326,103 +286,6 @@ const CreateStaking: React.FC = () => {
                                     <form
                                         onSubmit={handleSubmit(onSubmit)}
                                         className='space-y-8'>
-                                        <FormField
-                                            control={control}
-                                            name='dpr'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>DPR (Daily Percentage Rate)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the Daily Percentage Rate for staking.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='startDate'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Start Date</FormLabel>
-                                                    <FormControl>
-                                                        <Popover>
-                                                            <PopoverTrigger asChild>
-                                                                <Button
-                                                                    variant={"outline"}
-                                                                    className={cn(
-                                                                        "w-[400px] pl-6 justify-start text-left font-normal",
-                                                                        !field.value && "text-muted-foreground"
-                                                                    )}
-                                                                >
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent className="w-auto p-0">
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={field.value || undefined}
-                                                                    onSelect={(date) => field.onChange(date)}
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Select the start date for the staking.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='duration'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Duration (in days)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the duration of the staking period in days.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='claimInterval'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Claim Interval (in days)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the interval for claiming rewards in days.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
                                         <FormField
                                             control={control}
                                             name='amount'
@@ -438,6 +301,26 @@ const CreateStaking: React.FC = () => {
                                                     </FormControl>
                                                     <FormDescription>
                                                         Enter the amount to be staked.
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={control}
+                                            name='stakingId'
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Staking ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            type='text'
+                                                            {...field}
+                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                        />
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Enter the staking ID.
                                                     </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>
@@ -480,7 +363,7 @@ const CreateStaking: React.FC = () => {
                                             type='submit'
                                             className='bg-blue-600 text-white hover:bg-blue-700'
                                         >
-                                            Create Staking
+                                            Stake Tokens
                                         </Button>
                                         <div className='mt-4'>
                                             <p className=' text-gray-400 text-xs'>
@@ -498,4 +381,4 @@ const CreateStaking: React.FC = () => {
     );
 };
 
-export default CreateStaking;
+export default stake;

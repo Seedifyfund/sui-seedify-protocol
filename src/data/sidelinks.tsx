@@ -50,6 +50,18 @@ export const sidelinks: SideLink[] = [
     icon: <IconApps size={18} />,
   },
   {
+    title: 'Token/LP Locker',
+    label: '',
+    href: '/createlock',
+    icon: <IconApps size={18} />,
+  },
+  {
+    title: 'My Locker',
+    label: '',
+    href: '/mylocker',
+    icon: <IconApps size={18} />,
+  },
+  {
     title: 'Sui Address Checker',
     label: '',
     href: '/addressvalidator',

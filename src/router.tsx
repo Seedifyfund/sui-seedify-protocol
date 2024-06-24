@@ -60,6 +60,18 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/createlock',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/createlock')).default,
+    }),
+  },
+  {
+    path: '/mylocker',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/mylocker')).default,
+    }),
+  },
+  {
     path: '/createstaking',
     lazy: async () => ({
       Component: (await import('./pages/sui/createstaking')).default,

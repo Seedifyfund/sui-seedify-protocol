@@ -50,6 +50,8 @@ const formSchema = z.object({
     duration: z.preprocess((val) => Number(val), z.number().min(1, "Duration is required")),
     claimInterval: z.preprocess((val) => Number(val), z.number().min(1, "Claim Interval is required")),
     amount: z.preprocess((val) => Number(val), z.number().min(1, "Amount is required")),
+    maxStake: z.preprocess((val) => Number(val), z.number().min(1, "Max Stake is required")),
+    totalCapacity: z.preprocess((val) => Number(val), z.number().min(1, "Total Capacity is required")),
     coin: z.string().min(1, "Coin is required"),
 });
 
@@ -60,6 +62,8 @@ interface FormData {
     claimInterval: number;
     amount: number;
     coin: string;
+    maxStake: number;
+    totalCapacity: number;
 }
 
 interface CoinBalance {
@@ -81,6 +85,8 @@ const CreateStaking: React.FC = () => {
             duration: 1,
             claimInterval: 1,
             amount: 1,
+            maxStake: 1,
+            totalCapacity: 1,
             coin: "",
         },
     });
@@ -199,6 +205,8 @@ const CreateStaking: React.FC = () => {
             duration,
             claimInterval,
             amount,
+            maxStake,
+            totalCapacity,
             coin,
         } = data;
 
@@ -216,9 +224,17 @@ const CreateStaking: React.FC = () => {
             return;
         }
 
+        // Validate that maxStake and totalCapacity are numbers
+        if (isNaN(maxStake) || isNaN(totalCapacity)) {
+            console.error("Max Stake or Total Capacity is not a valid number");
+            return;
+        }
+
         const scaledAmount = BigInt(amount * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
         const scaledDuration = BigInt(duration * 24 * 60 * 60 * 1000); // Convert duration to milliseconds
         const scaledClaimInterval = BigInt(claimInterval * 24 * 60 * 60 * 1000); // Convert claim interval to milliseconds
+        const scaledMaxStake = BigInt(maxStake * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
+        const scaledTotalCapacity = BigInt(totalCapacity * 1_000_000_000); // Adjust this scaling factor based on the token's decimals
 
         const txBlock = new TransactionBlock();
         txBlock.setGasBudget(10000000);
@@ -252,6 +268,8 @@ const CreateStaking: React.FC = () => {
                 txBlock.pure(scaledAmount, "u64"),
                 txBlock.pure(scaledDuration, "u64"),
                 txBlock.pure(scaledClaimInterval, "u64"),
+                txBlock.pure(scaledMaxStake, "u64"),
+                txBlock.pure(scaledTotalCapacity, "u64"),
                 txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Assuming this is the Clock object
             ],
             typeArguments: [selectedCoinType],
@@ -301,200 +319,240 @@ const CreateStaking: React.FC = () => {
 
     return (
         <Layout>
-            <LayoutHeader>
-                <div className='ml-auto flex items-center space-x-4'>
-                    <UserNav />
-                </div>
-            </LayoutHeader>
-            <div className='flex'>
-                <Sidebar2
-                    isCollapsed={isCollapsed}
-                    setIsCollapsed={setIsCollapsed}
-                />
-                <div className='flex-1'>
-                    <div className='container mx-auto p-4 text-white '>
-                        <ToastContainer />
-                        <div className='flex justify-center items-center min-h-screen'>
-                            <div className=' rounded-lg shadow-lg p-6 w-full max-w-md'>
-                                <h2 className='text-2xl font-semibold mb-4 text-center'>
-                                    CREATE STAKING
-                                </h2>
-                                <Form
-                                    {...formMethods}
-                                    handleSubmit={handleSubmit}
-                                    control={control}>
-                                    <form
-                                        onSubmit={handleSubmit(onSubmit)}
-                                        className='space-y-8'>
-                                        <FormField
-                                            control={control}
-                                            name='dpr'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>DPR (Daily Percentage Rate)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the Daily Percentage Rate for staking.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='startDate'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Start Date</FormLabel>
-                                                    <FormControl>
-                                                        <Popover>
-                                                            <PopoverTrigger asChild>
-                                                                <Button
-                                                                    variant={"outline"}
-                                                                    className={cn(
-                                                                        "w-[400px] pl-6 justify-start text-left font-normal",
-                                                                        !field.value && "text-muted-foreground"
-                                                                    )}
-                                                                >
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent className="w-auto p-0">
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={field.value || undefined}
-                                                                    onSelect={(date) => field.onChange(date)}
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Select the start date for the staking.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='duration'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Duration (in days)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the duration of the staking period in days.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='claimInterval'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Claim Interval (in days)</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the interval for claiming rewards in days.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='amount'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Amount</FormLabel>
-                                                    <FormControl>
-                                                        <Input
-                                                            type='number'
-                                                            {...field}
-                                                            className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
-                                                        />
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Enter the amount to be staked.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={control}
-                                            name='coin'
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Select Coin</FormLabel>
-                                                    <FormControl>
-                                                        <Select
-                                                            onValueChange={(value) => {
-                                                                field.onChange(value);
-                                                                setSelectedCoin(value);
-                                                            }}
-                                                            defaultValue=''
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder='Select a coin' />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {coins.map((coin) => (
-                                                                    <SelectItem key={coin.coinObjectId} value={coin.coinObjectId}>
-                                                                        {coin.coinName} - Balance: {coin.totalBalance}
-                                                                    </SelectItem>
-                                                                ))}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </FormControl>
-                                                    <FormDescription>
-                                                        Select the coin for staking.
-                                                    </FormDescription>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <Button
-                                            type='submit'
-                                            className='bg-blue-600 text-white hover:bg-blue-700'
-                                        >
-                                            Create Staking
-                                        </Button>
-                                        <div className='mt-4'>
-                                            <p className=' text-gray-400 text-xs'>
-                                                Digest: {digest}
-                                            </p>
-                                        </div>
-                                    </form>
-                                </Form>
-                            </div>
+        <LayoutHeader>
+            <div className='ml-auto flex items-center space-x-4'>
+                <UserNav />
+            </div>
+        </LayoutHeader>
+        <div className='flex'>
+            <Sidebar2
+                isCollapsed={isCollapsed}
+                setIsCollapsed={setIsCollapsed}
+            />
+            <div className='flex-1'>
+                <div className='container mx-auto p-4 text-white '>
+                    <ToastContainer />
+                    <div className='flex justify-center items-center min-h-screen'>
+                        <div className=' rounded-lg shadow-lg p-6 w-full max-w-md'>
+                            <h2 className='text-2xl font-semibold mb-4 text-center'>
+                                CREATE STAKING
+                            </h2>
+                            <Form
+                                {...formMethods}
+                                handleSubmit={handleSubmit}
+                                control={control}>
+                                <form
+                                    onSubmit={handleSubmit(onSubmit)}
+                                    className='space-y-8'>
+                                    <FormField
+                                        control={control}
+                                        name='dpr'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>DPR (Daily Percentage Rate)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the Daily Percentage Rate for staking.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='startDate'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Start Date</FormLabel>
+                                                <FormControl>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button
+                                                                variant={"outline"}
+                                                                className={cn(
+                                                                    "w-[400px] pl-6 justify-start text-left font-normal",
+                                                                    !field.value && "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                            </Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value || undefined}
+                                                                onSelect={(date) => field.onChange(date)}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Select the start date for the staking.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='duration'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Duration (in days)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the duration of the staking period in days.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='claimInterval'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Claim Interval (in days)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the interval for claiming rewards in days.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='amount'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Amount</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the amount to be staked.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='maxStake'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Max Stake</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the maximum amount each user can stake.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='totalCapacity'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Total Capacity</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type='number'
+                                                        {...field}
+                                                        className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Enter the total capacity of the staking pool.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={control}
+                                        name='coin'
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Select Coin</FormLabel>
+                                                <FormControl>
+                                                    <Select
+                                                        onValueChange={(value) => {
+                                                            field.onChange(value);
+                                                            setSelectedCoin(value);
+                                                        }}
+                                                        defaultValue=''
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder='Select a coin' />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {coins.map((coin) => (
+                                                                <SelectItem key={coin.coinObjectId} value={coin.coinObjectId}>
+                                                                    {coin.coinName} - Balance: {coin.totalBalance}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Select the coin for staking.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <Button
+                                        type='submit'
+                                        className='bg-blue-600 text-white hover:bg-blue-700'
+                                    >
+                                        Create Staking
+                                    </Button>
+                                    <div className='mt-4'>
+                                        <p className=' text-gray-400 text-xs'>
+                                            Digest: {digest}
+                                        </p>
+                                    </div>
+                                </form>
+                            </Form>
                         </div>
                     </div>
                 </div>
             </div>
-        </Layout>
+        </div>
+    </Layout>
     );
 };
 

@@ -23,7 +23,7 @@ interface CoinBalance {
     lockedBalance: Record<string, string>;
 }
 
-const BATCH_SIZE = 50; // Define a batch size that is manageable based on your gas and block size limits
+const BATCH_SIZE = 100; // Define a batch size that is manageable based on your gas and block size limits
 
 const Multisender: React.FC = () => {
     const currentAccount = useCurrentAccount();
@@ -41,6 +41,7 @@ const Multisender: React.FC = () => {
     const [isCollapsed, setIsCollapsed] = useState(false); // State for sidebar collapse
     const [coins, setCoins] = useState<
         {
+            [x: string]: any;
             coinType: string;
             coinObjectId: string;
             coinName: string;
@@ -57,7 +58,7 @@ const Multisender: React.FC = () => {
     const [triggerFetch, setTriggerFetch] = useState<boolean>(false); // State to trigger fetch
     const [invalidAddresses, setInvalidAddresses] = useState<string[]>([]); // State for invalid addresses
     const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // State for modal visibility
-
+    const GAS_BUDGET = 200000000;
 
     useEffect(() => {
         if (currentAccount) {
@@ -92,6 +93,8 @@ const Multisender: React.FC = () => {
         }
     };
 
+    
+
     const fetchBalances = async (ownerAddress: string) => {
         try {
             const balances: CoinBalance[] = await client.getAllBalances({
@@ -116,18 +119,20 @@ const Multisender: React.FC = () => {
                             coins.push(...result.data);
                             cursor = result.nextCursor;
                         } while (result.hasNextPage);
-
+    
                         if (coins.length === 0) {
                             console.error(`No coin object found for coin type: ${balance.coinType}`);
                             return null;
                         }
-
-                        const coinObjectId = coins[0].coinObjectId;
+    
                         const adjustedBalance = Number(balance.totalBalance) / Math.pow(10, coinDetails.decimals);
-
+    
                         return {
                             coinType: balance.coinType,
-                            coinObjectId,
+                            coins: coins.map(coin => ({
+                                coinObjectId: coin.coinObjectId,
+                                balance: coin.balance
+                            })),
                             coinName: coinDetails.name,
                             totalBalance: adjustedBalance.toString(),
                             decimals: coinDetails.decimals,
@@ -136,20 +141,23 @@ const Multisender: React.FC = () => {
                     return null;
                 })
             );
-
+    
             const validCoins = coinsWithNames.filter((coin) => coin !== null) as {
                 coinType: string;
-                coinObjectId: string;
+                coins: { coinObjectId: string; balance: string }[];
                 coinName: string;
                 totalBalance: string;
                 decimals: number;
             }[];
-
-            setCoins(validCoins);
+    
+            setCoins(validCoins.map((coin) => ({ ...coin, coinObjectId: "" })));
         } catch (e) {
             console.error("Failed to fetch balances:", e);
         }
     };
+
+    
+    
 
     const addRecipient = () => {
         setRecipients([...recipients, ""]);
@@ -199,6 +207,27 @@ const Multisender: React.FC = () => {
         document.body.removeChild(link);
     };
 
+    const sendTransactionWithRetry = async (txBlock: TransactionBlock, retries = 1) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                const result = await signAndExecuteTransactionBlock.mutateAsync({
+                    transactionBlock: txBlock,
+                    options: {
+                        showObjectChanges: false,
+                        showEffects: false,
+                    },
+                    requestType: "WaitForLocalExecution",
+                });
+                return result;
+            } catch (error) {
+                console.error(`Attempt ${attempt} failed:`, error);
+                if (attempt === retries) throw error;
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempt))); // Exponential backoff
+            }
+        }
+    };
+    
+
     
 
     const sendToMultiple = async () => {
@@ -244,57 +273,24 @@ const Multisender: React.FC = () => {
     
                 // Reinitialize the transaction block for each batch
                 const txBlock = new TransactionBlock();
-                txBlock.setGasBudget(1000000000); // Ensure you have enough gas budget
+                txBlock.setGasBudget(GAS_BUDGET); // Ensure you have enough gas budget
     
                 for (let j = 0; j < batchRecipients.length; j++) {
                     const recipient = batchRecipients[j];
                     const amount = batchAmounts[j];
     
-                    // Fetch enough coin objects to cover the amount
-                    let remainingAmount = amount;
-                    let coinObjects = [];
-                    let cursor = null;
+                    // Use selected coin object
+                    const selectedCoinObjectId = selectedCoin.split("|")[0];
     
-                    while (remainingAmount > 0) {
-                        const result = await client.getCoins({
-                            owner: currentAccount.address,
-                            coinType: selectedCoinType,
-                            limit: 50,
-                            cursor: cursor,
-                        });
-    
-                        for (let coin of result.data) {
-                            const coinBalance = BigInt(coin.balance);
-    
-                            if (coinBalance >= remainingAmount) {
-                                coinObjects.push({ coinObjectId: coin.coinObjectId, amount: remainingAmount });
-                                remainingAmount = 0n;
-                                break;
-                            } else {
-                                coinObjects.push({ coinObjectId: coin.coinObjectId, amount: coinBalance });
-                                remainingAmount -= coinBalance;
-                            }
-                        }
-    
-                        cursor = result.nextCursor;
-    
-                        if (!result.hasNextPage && remainingAmount > 0) {
-                            throw new Error("Insufficient balance to complete the transaction");
-                        }
-                    }
-    
-                    // Create a move call for each coin object
-                    for (let coin of coinObjects) {
-                        txBlock.moveCall({
-                            target: `${multisenderAddress}::multisender::entry_send_to_multiple`,
-                            arguments: [
-                                txBlock.object(coin.coinObjectId),
-                                txBlock.pure([recipient], "vector<address>"),
-                                txBlock.pure([coin.amount], "vector<u64>"),
-                            ],
-                            typeArguments: [selectedCoinType],
-                        });
-                    }
+                    txBlock.moveCall({
+                        target: `${multisenderAddress}::multisender::entry_send_to_multiple`,
+                        arguments: [
+                            txBlock.object(selectedCoinObjectId),
+                            txBlock.pure([recipient], "vector<address>"),
+                            txBlock.pure([amount], "vector<u64>"),
+                        ],
+                        typeArguments: [selectedCoinType],
+                    });
     
                     // Collect transaction details
                     transactionDetails.push({
@@ -304,29 +300,26 @@ const Multisender: React.FC = () => {
                     });
                 }
     
-                const result = await signAndExecuteTransactionBlock.mutateAsync({
-                    transactionBlock: txBlock,
-                    options: {
-                        showObjectChanges: false,
-                        showEffects: false,
-                    },
-                    requestType: "WaitForLocalExecution",
-                });
+                const result = await sendTransactionWithRetry(txBlock);
     
-                console.log("Transaction result:", result);
-                setDigest(result.digest);
+                if (result && result.digest) {
+                    console.log("Transaction result:", result);
+                    setDigest(result.digest);
     
-                // Wait for the transaction to be processed and confirmed
-                const transaction = await client.waitForTransactionBlock({
-                    digest: result.digest,
-                    options: {
-                        showEffects: true,
-                    },
-                    timeout: 60000,
-                    pollInterval: 2000, // Poll every 2 seconds
-                });
+                    // Wait for the transaction to be processed and confirmed
+                    const transaction = await client.waitForTransactionBlock({
+                        digest: result.digest,
+                        options: {
+                            showEffects: true,
+                        },
+                        timeout: 60000,
+                        pollInterval: 2000, // Poll every 2 seconds
+                    });
     
-                console.log("Transaction effects:", transaction);
+                    console.log("Transaction effects:", transaction);
+                } else {
+                    throw new Error("Transaction result is undefined or missing digest");
+                }
             }
     
             toast.success("Tokens sent successfully!");
@@ -339,7 +332,6 @@ const Multisender: React.FC = () => {
             toast.error(`Failed to send tokens: ${(e as Error).message}`);
         }
     };
-    
     
 
     return (
@@ -368,30 +360,31 @@ const Multisender: React.FC = () => {
                                             Select Coin
                                         </label>
                                         <Select
-                                            onValueChange={(value) => {
-                                                setSelectedCoin(value);
-                                                const coin = coins.find((coin) => coin.coinObjectId === value);
-                                                if (coin) {
-                                                    setSelectedCoinType(coin.coinType);
-                                                    setSelectedCoinDecimals(coin.decimals);
-                                                }
-                                            }}
-                                            defaultValue=''
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder='Select a coin' />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {coins.map((coin) => (
-                                                    <SelectItem
-                                                        key={coin.coinObjectId}
-                                                        value={coin.coinObjectId}
-                                                    >
-                                                        {coin.coinName} - Balance: {coin.totalBalance}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+    onValueChange={(value) => {
+        setSelectedCoin(value);
+        const [coinObjectId, coinType, decimals] = value.split("|");
+        setSelectedCoinType(coinType);
+        setSelectedCoinDecimals(Number(decimals));
+    }}
+    defaultValue=''
+>
+    <SelectTrigger>
+        <SelectValue placeholder='Select a coin object' />
+    </SelectTrigger>
+    <SelectContent>
+        {coins.map((coin) => (
+            coin.coins.map((coinObject: { coinObjectId: React.Key | null | undefined; balance: any; }) => (
+                <SelectItem
+                    key={coinObject.coinObjectId}
+                    value={`${coinObject.coinObjectId}|${coin.coinType}|${coin.decimals}`}
+                >
+                    {coin.coinName} - Object Balance: {Number(coinObject.balance) / Math.pow(10, coin.decimals)}
+                </SelectItem>
+            ))
+        ))}
+    </SelectContent>
+</Select>
+
                                     </div>
                                     <div className='flex justify-center'>
                                         <div className='file-input-wrapper'>

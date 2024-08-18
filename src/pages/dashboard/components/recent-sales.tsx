@@ -20,20 +20,21 @@ interface WalletFields {
 
 export function RecentSales() {
   const currentAccount = useCurrentAccount();
-  const { network } = useNetwork(); // Use selectedNetwork from context
+  const { network } = useNetwork();
   const client = new SuiClient({ url: getFullnodeUrl(network) });
   const [wallets, setWallets] = useState<WalletFields[]>([]);
   const [copiedWalletId, setCopiedWalletId] = useState<string | null>(null);
-  const torqueProtocolAddress = network === 'mainnet'
-    ? import.meta.env.VITE_MAINNET_TORQUE_ADDRESS
-    : import.meta.env.VITE_TESTNET_TORQUE_ADDRESS;
+  
+  const seedifyProtocolAddress = network === 'mainnet'
+    ? import.meta.env.VITE_MAINNET_SEEDIFY_ADDRESS
+    : import.meta.env.VITE_TESTNET_SEEDIFY_ADDRESS;
 
   const fetchVestingStatus = async () => {
     try {
       const response = await client.getOwnedObjects({
         owner: currentAccount?.address || '',
         filter: {
-          StructType: `${torqueProtocolAddress}::torqueprotocol::Wallet`,
+          StructType: `${seedifyProtocolAddress}::seedifyprotocol::Wallet`,
         },
         options: {
           showType: true,
@@ -53,7 +54,7 @@ export function RecentSales() {
           const wallet = walletResponse.data;
           if (!wallet || !wallet.content || !('fields' in wallet.content)) return null;
 
-          const fields = wallet.content.fields as any; // Use 'as any' to bypass strict type checks
+          const fields = wallet.content.fields as any; 
 
           const fullType = wallet.content.type;
           const typeMatch = fullType.match(/<(.+)>/);
@@ -80,7 +81,7 @@ export function RecentSales() {
     if (currentAccount) {
       fetchVestingStatus();
     }
-  }, [currentAccount]);
+  }, [currentAccount, network]); // Added network as a dependency
 
   const shortenWalletId = (walletId: string) => {
     if (!walletId) return '';
@@ -92,7 +93,7 @@ export function RecentSales() {
   const handleCopy = (walletId: string) => {
     navigator.clipboard.writeText(walletId);
     setCopiedWalletId(walletId);
-    setTimeout(() => setCopiedWalletId(null), 2000); // Clear the copied state after 2 seconds
+    setTimeout(() => setCopiedWalletId(null), 2000);
   };
 
   return (

@@ -21,9 +21,9 @@ export default function Dashboard() {
   const currentAccount = useCurrentAccount();
   const { network } = useNetwork(); // Use selectedNetwork from context
 	const client = new SuiClient({ url: getFullnodeUrl(network) });
-  const torqueProtocolAddress = network === 'mainnet'
-    ? import.meta.env.VITE_MAINNET_TORQUE_ADDRESS
-    : import.meta.env.VITE_TESTNET_TORQUE_ADDRESS;
+  const seedifyProtocolAddress = network === 'mainnet'
+    ? import.meta.env.VITE_MAINNET_SEEDIFY_ADDRESS
+    : import.meta.env.VITE_TESTNET_SEEDIFY_ADDRESS;
 
 
   const [totalWallets, setTotalWallets] = useState(0);
@@ -37,7 +37,7 @@ export default function Dashboard() {
         const response = await client.getOwnedObjects({
           owner: currentAccount?.address || '',
           filter: {
-            StructType: `${torqueProtocolAddress}::torqueprotocol::Wallet`,
+            StructType: `${seedifyProtocolAddress}::seedifyprotocol::Wallet`,
             // 0x4afa11807187e5c657ffba3b552fdbb546d6e496ee5591dca919c99dd48d3f27 Testnet package ID for Torque Protocol
           },
           options: {

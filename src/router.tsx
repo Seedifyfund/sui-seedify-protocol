@@ -6,24 +6,6 @@ import MaintenanceError from './pages/errors/maintenance-error'
 const router = createBrowserRouter([
   // Auth routes
   {
-    path: '/sign-in',
-    lazy: async () => ({
-      Component: (await import('./pages/auth/sign-in')).default,
-    }),
-  },
-  {
-    path: '/sign-in-2',
-    lazy: async () => ({
-      Component: (await import('./pages/auth/sign-in-2')).default,
-    }),
-  },
-  {
-    path: '/sign-up',
-    lazy: async () => ({
-      Component: (await import('./pages/auth/sign-up')).default,
-    }),
-  },
-  {
     path: '/create',
     lazy: async () => ({
       Component: (await import('./pages/sui/create')).default,
@@ -47,54 +29,15 @@ const router = createBrowserRouter([
   //     Component: (await import('./pages/sui/allvestings')).default,
   //   }),
   // },
-  {
-    path: '/multisender',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/multisender')).default,
-    }),
-  },
-  {
-    path: '/addressvalidator',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/addressvalidator')).default,
-    }),
-  },
-  {
-    path: '/createlock',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/createlock')).default,
-    }),
-  },
-  {
-    path: '/mylocker',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/mylocker')).default,
-    }),
-  },
-  {
-    path: '/createstaking',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/createstaking')).default,
-    }),
-  },
-  {
-    path: '/stake',
-    lazy: async () => ({
-      Component: (await import('./pages/sui/stake')).default,
-    }),
-  },
+ 
+  
   {
     path: '/forgot-password',
     lazy: async () => ({
       Component: (await import('./pages/auth/forgot-password')).default,
     }),
   },
-  {
-    path: '/otp',
-    lazy: async () => ({
-      Component: (await import('./pages/auth/otp')).default,
-    }),
-  },
+
 
   // Main routes
   {
@@ -111,12 +54,7 @@ const router = createBrowserRouter([
           Component: (await import('./pages/dashboard')).default,
         }),
       },
-      {
-        path: 'tasks',
-        lazy: async () => ({
-          Component: (await import('@/pages/tasks')).default,
-        }),
-      },
+     
       {
         path: 'chats',
         lazy: async () => ({

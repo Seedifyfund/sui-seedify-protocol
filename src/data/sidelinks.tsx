@@ -36,67 +36,14 @@ export const sidelinks: SideLink[] = [
     href: '/claim',
     icon: <IconChecklist size={18} />,
   },
-  {
-    title: 'All Vestings',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconChecklist size={18} />,
-  },
+  // {
+  //   title: 'All Vestings',
+  //   label: '',
+  //   href: '/coming-soon',
+  //   icon: <IconChecklist size={18} />,
+  // },
 
-  {
-    title: 'Multisender',
-    label: '',
-    href: '/multisender',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'Token/LP Locker',
-    label: '',
-    href: '/createlock',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'My Locker',
-    label: '',
-    href: '/mylocker',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'Sui Address Checker',
-    label: '',
-    href: '/addressvalidator',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'Create Staking',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'Stake & Earn',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'My Stakings',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'All Stakings',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconApps size={18} />,
-  },
-  {
-    title: 'Mint Coins',
-    label: '',
-    href: '/coming-soon',
-    icon: <IconApps size={18} />,
-  },
+
 
 
   // {

@@ -26,7 +26,9 @@ module seedifyprotocol::seedifyprotocol {
     renouncement_start: u64,  // Start time for renouncement period
     renouncement_end: u64,    // End time for renouncement period
     claim_renounced: bool,    // Flag for renouncing claim
+    admin: address,           // Admin address who created the vesting
 }
+
 
 
     // === Struct to Store Admin Info ===
@@ -50,8 +52,9 @@ module seedifyprotocol::seedifyprotocol {
     start: u64,
     duration: u64,
     claim_interval: u64,
-    renouncement_start: u64,  // New parameter
-    renouncement_end: u64,    // New parameter
+    renouncement_start: u64,
+    renouncement_end: u64,
+    admin: address,            // Pass admin address
     ctx: &mut TxContext
 ): Wallet<T> {
     assert!(start >= clock::timestamp_ms(c), EInvalidStartDate);
@@ -65,11 +68,13 @@ module seedifyprotocol::seedifyprotocol {
         duration,
         claim_interval,
         last_claimed: start,
-        renouncement_start,  // Initialize field
-        renouncement_end,    // Initialize field
+        renouncement_start,
+        renouncement_end,
         claim_renounced: false,
+        admin,  // Store the admin address
     }
 }
+
 
 // In entry_new, pass renouncement_start and renouncement_end to the new function
 
@@ -82,8 +87,8 @@ module seedifyprotocol::seedifyprotocol {
     start: u64,
     duration: u64,
     claim_interval: u64,
-    renouncement_start: u64,   // Add renouncement_start parameter
-    renouncement_end: u64,     // Add renouncement_end parameter
+    renouncement_start: u64,
+    renouncement_end: u64,
     receiver: address,
     ctx: &mut TxContext
 ) {
@@ -102,12 +107,14 @@ module seedifyprotocol::seedifyprotocol {
         start,
         duration,
         claim_interval,
-        renouncement_start,   // Pass renouncement_start
-        renouncement_end,     // Pass renouncement_end
+        renouncement_start,
+        renouncement_end,
+        tx_context::sender(ctx),  // Pass the admin (sender) address to the wallet
         ctx
     );
     transfer::public_transfer(wallet, receiver);
 }
+
 
 
     public fun vesting_status<T>(self: &Wallet<T>, c: &Clock): u64 {
@@ -143,22 +150,22 @@ module seedifyprotocol::seedifyprotocol {
 
     entry fun renounce_claim<T>(
     mut self: Wallet<T>,
-    admin: address,
-    c: &Clock,              // Include Clock to check current time
+    c: &Clock,              
     ctx: &mut TxContext
 ) {
     let current_time = clock::timestamp_ms(c);
     assert!(current_time >= self.renouncement_start && current_time <= self.renouncement_end, ERenouncementPeriodOver);
     assert!(self.released == 0, EAlreadyClaimed); // Prevent renouncing if any amount is already claimed
 
-    // Transfer the remaining balance to the admin
+    // Transfer the remaining balance to the stored admin address
     let remaining_balance = balance::value(&self.balance);
     let claimed_coin = coin::from_balance(balance::split(&mut self.balance, remaining_balance), ctx);
-    transfer::public_transfer(claimed_coin, admin);
+    transfer::public_transfer(claimed_coin, self.admin);  // Use stored admin address
 
     // Destroy the wallet object by passing the ownership to destroy_zero
     destroy_zero(self);
 }
+
 
 
 

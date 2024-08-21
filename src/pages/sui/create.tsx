@@ -4,6 +4,8 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui.js/client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import {
 	Form,
 	FormControl,
@@ -29,7 +31,7 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import "react-toastify/dist/ReactToastify.css";
 import { toast, ToastContainer } from "react-toastify";
-import Papa from "papaparse"; // CSV parsing library
+import Papa from "papaparse";
 import {
 	convertToMilliseconds,
 	convertTo24HourFormat,
@@ -65,6 +67,8 @@ const formSchema = z.object({
 	coin: z.string().min(1),
 	renouncementStart: z.date().nullable(),
 	renouncementEnd: z.date().nullable(),
+	admin: z.string().min(1), // New field for admin
+	immediateTransferTime: z.string().min(1, "Immediate Transfer Time is required"), // New field for immediate transfer time
 });
 
 interface FormData {
@@ -80,6 +84,9 @@ interface FormData {
 	coin: string;
 	renouncementStart: Date | null;
 	renouncementEnd: Date | null;
+	admin: string;
+	immediateTransferTime: string;
+	immediateTransferDate: Date | null;
 }
 
 interface CsvData {
@@ -113,6 +120,9 @@ const Create: React.FC = () => {
 			coin: "",
 			renouncementStart: new Date(),
 			renouncementEnd: new Date(new Date().setMonth(new Date().getMonth() + 6)),
+			admin: currentAccount?.address || "", // Default admin to the current account's address
+			immediateTransferTime: "12:00 PM", // Default immediate transfer time
+			immediateTransferDate: new Date(),
 		},
 	});
 
@@ -123,14 +133,13 @@ const Create: React.FC = () => {
 			coinObjectId: string;
 			coinName: string;
 			totalBalance: string;
-			decimals: number; // Store decimals
+			decimals: number;
 		}[]
 	>([]);
 	const [selectedCoin, setSelectedCoin] = useState<string>("");
-	const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0); // Add state for decimals
+	const [selectedCoinDecimals, setSelectedCoinDecimals] = useState<number>(0);
 	const [csvData, setCsvData] = useState<CsvData[]>([]);
 	const [isCollapsed, setIsCollapsed] = useState(false);
-	const [isRejected, setIsRejected] = useState(false);
 
 	const { network } = useNetwork();
 	const client = new SuiClient({ url: getFullnodeUrl(network) });
@@ -199,7 +208,7 @@ const Create: React.FC = () => {
 							coinObjectId,
 							coinName: coinDetails.name,
 							totalBalance: adjustedBalance.toString(),
-							decimals: coinDetails.decimals, // Store decimals
+							decimals: coinDetails.decimals,
 						};
 					}
 					return null;
@@ -213,7 +222,7 @@ const Create: React.FC = () => {
 				coinObjectId: string;
 				coinName: string;
 				totalBalance: string;
-				decimals: number; // Include decimals in the type
+				decimals: number;
 			}[];
 
 			setCoins(validCoins);
@@ -293,6 +302,8 @@ const Create: React.FC = () => {
 			transferPercentage,
 			renouncementStart,
 			renouncementEnd,
+			immediateTransferTime, // New field for immediate transfer time
+			admin, // New field for admin
 		} = data;
 	
 		if (!startDate || !renouncementStart || !renouncementEnd) {
@@ -312,6 +323,15 @@ const Create: React.FC = () => {
 			toast.error("Start time is in the past");
 			return;
 		}
+
+		const immediateTransferDate = new Date(data.immediateTransferDate || new Date()); // Get date
+const [immediateHour, immediateMinute, immediatePeriod] = data.immediateTransferTime.split(/[: ]/);
+const immediateHour24 = convertTo24HourFormat(parseInt(immediateHour, 10), immediatePeriod as "AM" | "PM");
+immediateTransferDate.setHours(immediateHour24, parseInt(immediateMinute, 10), 0, 0);
+const immediateTransferTimeMs = immediateTransferDate.getTime();
+const immediateTransferTimeMsBigInt = BigInt(immediateTransferTimeMs);
+
+
 	
 		const scaledDuration = BigInt(convertToMilliseconds(duration, durationUnit));
 		const scaledClaimInterval = BigInt(
@@ -360,6 +380,7 @@ const Create: React.FC = () => {
 							txBlock.pure(scaledClaimInterval, "u64"),
 							txBlock.pure(renouncementStartMs, "u64"),
 							txBlock.pure(renouncementEndMs, "u64"),
+							txBlock.pure(immediateTransferTimeMsBigInt, "u64"), // Pass immediate transfer time
 							txBlock.pure(receiverAddress, "address"),
 						],
 						typeArguments: [selectedCoinType],
@@ -430,6 +451,7 @@ const Create: React.FC = () => {
 					txBlock.pure(scaledClaimInterval, "u64"),
 					txBlock.pure(renouncementStartMs, "u64"),
 					txBlock.pure(renouncementEndMs, "u64"),
+					txBlock.pure(immediateTransferTimeMsBigInt, "u64"), // Pass immediate transfer time
 					txBlock.pure(data.receiver, "address"),
 				],
 				typeArguments: [selectedCoinType],
@@ -490,8 +512,6 @@ const Create: React.FC = () => {
 		}
 	};
 	
-
-
 	return (
 		<Layout>
 			<LayoutHeader>
@@ -508,19 +528,19 @@ const Create: React.FC = () => {
 					<div className='container mx-auto p-4 text-white'>
 						<ToastContainer />
 						<div className='flex justify-center items-center min-h-screen'>
-							<div className='rounded-lg shadow-lg p-6 w-full max-w-md'>
-								<h2 className='text-2xl font-semibold mb-4 text-center'>
-									CREATE VESTING
+							<div className='rounded-lg shadow-lg p-6 w-full max-w-lg '>
+								<h2 className='text-3xl font-bold mb-4 text-center text-gray-200'>
+									Create Vesting
 								</h2>
 								<Form {...formMethods} handleSubmit={handleSubmit} control={control}>
 									<form onSubmit={handleSubmit(onSubmit)} className='space-y-8'>
-
-									<FormField
+									
+										<FormField
 											control={control}
 											name='coin'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Select Coin</FormLabel>
+													<FormLabel className="text-gray-300">Select Coin</FormLabel>
 													<FormControl>
 														<Select
 															onValueChange={(value) => {
@@ -528,15 +548,15 @@ const Create: React.FC = () => {
 																setSelectedCoin(value);
 																const selectedCoinData = coins.find((coin) => coin.coinObjectId === value);
 																if (selectedCoinData) {
-																	setSelectedCoinDecimals(selectedCoinData.decimals); // Set decimals
+																	setSelectedCoinDecimals(selectedCoinData.decimals);
 																}
 															}}
 															defaultValue=''
 														>
-															<SelectTrigger>
+															<SelectTrigger className="bg-gray-700 text-gray-300">
 																<SelectValue placeholder='Select a coin' />
 															</SelectTrigger>
-															<SelectContent>
+															<SelectContent className="bg-gray-700 text-gray-300">
 																{coins.map((coin) => (
 																	<SelectItem
 																		key={coin.coinObjectId}
@@ -548,25 +568,25 @@ const Create: React.FC = () => {
 															</SelectContent>
 														</Select>
 													</FormControl>
-													<FormDescription>Select the coin for vesting.</FormDescription>
+													<FormDescription className="text-gray-400">Select the coin for vesting.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={control}
 											name='startDate'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Start Date</FormLabel>
+													<FormLabel className="text-gray-300">Start Date</FormLabel>
 													<FormControl>
 														<Popover>
 															<PopoverTrigger asChild>
 																<Button
 																	variant={"outline"}
 																	className={cn(
-																		"w-[400px] pl-6 justify-start text-left font-normal",
+																		"w-full pl-6 justify-start text-left font-normal bg-gray-700 text-gray-300",
 																		!field.value && "text-muted-foreground"
 																	)}
 																>
@@ -574,7 +594,7 @@ const Create: React.FC = () => {
 																	{field.value ? format(field.value, "PPP") : "Pick a date"}
 																</Button>
 															</PopoverTrigger>
-															<PopoverContent className='w-auto p-0'>
+															<PopoverContent className='w-auto p-0 bg-gray-800'>
 																<Calendar
 																	mode='single'
 																	selected={field.value || undefined}
@@ -584,36 +604,38 @@ const Create: React.FC = () => {
 															</PopoverContent>
 														</Popover>
 													</FormControl>
-													<FormDescription>Select the start date for the vesting.</FormDescription>
+													<FormDescription className="text-gray-400">Select the start date for the vesting.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='startTime'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Start Time</FormLabel>
+													<FormLabel className="text-gray-300">Start Time</FormLabel>
 													<FormControl>
 														<Input
 															type='text'
 															{...field}
-															className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+															className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 															placeholder='e.g., 12:30 PM'
 														/>
 													</FormControl>
-													<FormDescription>Enter the start time (e.g., 12:30 PM).</FormDescription>
+													<FormDescription className="text-gray-400">Enter the start time (e.g., 12:30 PM).</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='duration'
 											render={() => (
 												<FormItem>
-													<FormLabel>Duration</FormLabel>
+													<FormLabel className="text-gray-300">Duration</FormLabel>
 													<FormControl>
 														<Controller
 															name='duration'
@@ -624,48 +646,50 @@ const Create: React.FC = () => {
 																	{...field}
 																	value={field.value || ""}
 																	onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-																	className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+																	className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 																/>
 															)}
 														/>
 													</FormControl>
-													<FormDescription>Enter the duration of the vesting period.</FormDescription>
+													<FormDescription className="text-gray-400">Enter the duration of the vesting period.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='durationUnit'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Duration Unit</FormLabel>
+													<FormLabel className="text-gray-300">Duration Unit</FormLabel>
 													<FormControl>
 														<Select
 															onValueChange={field.onChange}
 															defaultValue={field.value}
 														>
-															<SelectTrigger>
+															<SelectTrigger className="bg-gray-700 text-gray-300">
 																<SelectValue placeholder='Select duration unit' />
 															</SelectTrigger>
-															<SelectContent>
+															<SelectContent className="bg-gray-700 text-gray-300">
 																<SelectItem value='minutes'>Minutes</SelectItem>
 																<SelectItem value='hours'>Hours</SelectItem>
 																<SelectItem value='days'>Days</SelectItem>
 															</SelectContent>
 														</Select>
 													</FormControl>
-													<FormDescription>Select the unit of duration.</FormDescription>
+													<FormDescription className="text-gray-400">Select the unit of duration.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='claimInterval'
 											render={() => (
 												<FormItem>
-													<FormLabel>Claim Interval</FormLabel>
+													<FormLabel className="text-gray-300">Claim Interval</FormLabel>
 													<FormControl>
 														<Controller
 															name='claimInterval'
@@ -676,55 +700,57 @@ const Create: React.FC = () => {
 																	{...field}
 																	value={field.value || ""}
 																	onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-																	className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+																	className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 																/>
 															)}
 														/>
 													</FormControl>
-													<FormDescription>Enter the interval for claims.</FormDescription>
+													<FormDescription className="text-gray-400">Enter the interval for claims.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='claimIntervalUnit'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Claim Interval Unit</FormLabel>
+													<FormLabel className="text-gray-300">Claim Interval Unit</FormLabel>
 													<FormControl>
 														<Select
 															onValueChange={field.onChange}
 															defaultValue={field.value}
 														>
-															<SelectTrigger>
+															<SelectTrigger className="bg-gray-700 text-gray-300">
 																<SelectValue placeholder='Select interval unit' />
 															</SelectTrigger>
-															<SelectContent>
+															<SelectContent className="bg-gray-700 text-gray-300">
 																<SelectItem value='minutes'>Minutes</SelectItem>
 																<SelectItem value='hours'>Hours</SelectItem>
 																<SelectItem value='days'>Days</SelectItem>
 															</SelectContent>
 														</Select>
 													</FormControl>
-													<FormDescription>Select the unit of the claim interval.</FormDescription>
+													<FormDescription className="text-gray-400">Select the unit of the claim interval.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='renouncementStart'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Renouncement Start Date</FormLabel>
+													<FormLabel className="text-gray-300">Renouncement Start Date</FormLabel>
 													<FormControl>
 														<Popover>
 															<PopoverTrigger asChild>
 																<Button
 																	variant={"outline"}
 																	className={cn(
-																		"w-[400px] pl-6 justify-start text-left font-normal",
+																		"w-full pl-6 justify-start text-left font-normal bg-gray-700 text-gray-300",
 																		!field.value && "text-muted-foreground"
 																	)}
 																>
@@ -732,7 +758,7 @@ const Create: React.FC = () => {
 																	{field.value ? format(field.value, "PPP") : "Pick a date"}
 																</Button>
 															</PopoverTrigger>
-															<PopoverContent className='w-auto p-0'>
+															<PopoverContent className='w-auto p-0 bg-gray-800'>
 																<Calendar
 																	mode='single'
 																	selected={field.value || undefined}
@@ -742,24 +768,25 @@ const Create: React.FC = () => {
 															</PopoverContent>
 														</Popover>
 													</FormControl>
-													<FormDescription>Select the start date for renouncement.</FormDescription>
+													<FormDescription className="text-gray-400">Select the start date for renouncement.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
-										/>
+										 />
+
 										<FormField
 											control={control}
 											name='renouncementEnd'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Renouncement End Date</FormLabel>
+													<FormLabel className="text-gray-300">Renouncement End Date</FormLabel>
 													<FormControl>
 														<Popover>
 															<PopoverTrigger asChild>
 																<Button
 																	variant={"outline"}
 																	className={cn(
-																		"w-[400px] pl-6 justify-start text-left font-normal",
+																		"w-full pl-6 justify-start text-left font-normal bg-gray-700 text-gray-300",
 																		!field.value && "text-muted-foreground"
 																	)}
 																>
@@ -767,7 +794,7 @@ const Create: React.FC = () => {
 																	{field.value ? format(field.value, "PPP") : "Pick a date"}
 																</Button>
 															</PopoverTrigger>
-															<PopoverContent className='w-auto p-0'>
+															<PopoverContent className='w-auto p-0 bg-gray-800'>
 																<Calendar
 																	mode='single'
 																	selected={field.value || undefined}
@@ -777,35 +804,37 @@ const Create: React.FC = () => {
 															</PopoverContent>
 														</Popover>
 													</FormControl>
-													<FormDescription>Select the end date for renouncement.</FormDescription>
+													<FormDescription className="text-gray-400">Select the end date for renouncement.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='receiver'
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Receiver Address</FormLabel>
+													<FormLabel className="text-gray-300">Receiver Address</FormLabel>
 													<FormControl>
 														<Input
 															type='text'
 															{...field}
-															className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+															className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 														/>
 													</FormControl>
-													<FormDescription>Enter the receiver address.</FormDescription>
+													<FormDescription className="text-gray-400">Enter the receiver address.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='amount'
 											render={() => (
 												<FormItem>
-													<FormLabel>Amount</FormLabel>
+													<FormLabel className="text-gray-300">Amount</FormLabel>
 													<FormControl>
 														<Controller
 															name='amount'
@@ -816,22 +845,23 @@ const Create: React.FC = () => {
 																	{...field}
 																	value={field.value || ""}
 																	onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-																	className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+																	className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 																/>
 															)}
 														/>
 													</FormControl>
-													<FormDescription>Enter the amount to be vested.</FormDescription>
+													<FormDescription className="text-gray-400">Enter the amount to be vested.</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
 										<FormField
 											control={control}
 											name='transferPercentage'
 											render={() => (
 												<FormItem>
-													<FormLabel>TGE Percentage</FormLabel>
+													<FormLabel className="text-gray-300">TGE Percentage</FormLabel>
 													<FormControl>
 														<Controller
 															name='transferPercentage'
@@ -842,41 +872,121 @@ const Create: React.FC = () => {
 																	{...field}
 																	value={field.value || ""}
 																	onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
-																	className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+																	className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 																	placeholder='Enter percentage (0-100)'
 																/>
 															)}
 														/>
 													</FormControl>
-													<FormDescription>Enter the immediate transfer percentage (0-100).</FormDescription>
+													<FormDescription className="text-gray-400">Enter the immediate transfer percentage (0-100).</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
-										
+
+										<FormField
+											control={control}
+											name='admin'
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel className="text-gray-300">Admin Address</FormLabel>
+													<FormControl>
+														<Input
+															type='text'
+															{...field}
+															value={field.value || currentAccount?.address} // Default to the current account address
+															className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
+														/>
+													</FormControl>
+													<FormDescription className="text-gray-400">The admin address that controls this vesting.</FormDescription>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+
+<FormField
+	control={control}
+	name='immediateTransferDate'
+	render={({ field }) => (
+		<FormItem>
+			<FormLabel className="text-gray-300">Immediate Transfer Date</FormLabel>
+			<FormControl>
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button
+							variant={"outline"}
+							className={cn(
+								"w-full pl-6 justify-start text-left font-normal bg-gray-700 text-gray-300",
+								!field.value && "text-muted-foreground"
+							)}
+						>
+							<CalendarIcon className='mr-2 h-4 w-4' />
+							{field.value ? format(field.value, "PPP") : "Pick a date"}
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent className='w-auto p-0 bg-gray-800'>
+						<Calendar
+							mode='single'
+							selected={field.value || undefined}
+							onSelect={(date) => field.onChange(date)}
+							initialFocus
+						/>
+					</PopoverContent>
+				</Popover>
+			</FormControl>
+			<FormDescription className="text-gray-400">Select the date for the immediate transfer.</FormDescription>
+			<FormMessage />
+		</FormItem>
+	)}
+/>
+
+<FormField
+	control={control}
+	name='immediateTransferTime'
+	render={({ field }) => (
+		<FormItem>
+			<FormLabel className="text-gray-300">Immediate Transfer Time</FormLabel>
+			<FormControl>
+				<Input
+					type='text'
+					{...field}
+					className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
+					placeholder='e.g., 12:00 PM'
+				/>
+			</FormControl>
+			<FormDescription className="text-gray-400">Enter the time for the immediate transfer.</FormDescription>
+			<FormMessage />
+		</FormItem>
+	)}
+/>
+
+
 										<FormItem>
-											<FormLabel>Upload CSV</FormLabel>
+											<FormLabel className="text-gray-300">Upload CSV</FormLabel>
 											<input
 												type='file'
 												accept='.csv'
 												onChange={handleCsvUpload}
-												className='mt-1 block w-full border-gray-600 bg-gray-700 text-white rounded-md shadow-sm'
+												className='mt-1 block w-full bg-gray-700 text-gray-300 rounded-md'
 											/>
-											<FormDescription>
+											<FormDescription className="text-gray-400">
 												Upload a CSV file with columns receiverAddress and amount.
 											</FormDescription>
 										</FormItem>
+
 										<Button
 											type='submit'
-											className='bg-blue-600 text-white hover:bg-blue-700'
+											className='bg-indigo-600 text-white hover:bg-indigo-700 w-full py-2 rounded-md'
 										>
 											Create Vesting
 										</Button>
+
 										<div className='mt-4'>
 											<p className=' text-gray-400 text-xs'>
 												Digest: {digest}
 											</p>
 										</div>
+
 									</form>
 								</Form>
 							</div>

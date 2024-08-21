@@ -34,6 +34,8 @@ interface WalletFields {
   walletType: string;
   coinName: string;
   admin: string;  // Admin address stored in the Wallet struct
+  immediate_transfer_time: number; // New field for immediate transfer time
+  immediate_transfer_claimed: boolean; // New field for checking if immediate transfer has been claimed
 }
 
 const Claim: React.FC = () => {
@@ -98,6 +100,8 @@ const Claim: React.FC = () => {
               walletType: walletType,
               coinName: coinName,
               admin: fields.admin,  // Extract the admin address
+              immediate_transfer_time: Number(fields.immediate_transfer_time), // Add this
+              immediate_transfer_claimed: fields.immediate_transfer_claimed, // Add this
             } as WalletFields;
           } catch (error) {
             console.log('Error fetching wallet details:', error);
@@ -141,8 +145,19 @@ const Claim: React.FC = () => {
 
   const calculateClaimableAmount = (wallet: WalletFields): number => {
     const currentTime = Date.now();
-    const vestedAmount = linear_vested_amount(wallet.start, wallet.duration * (24 * 60 * 60 * 1000), wallet.balance * 1_000_000_000, wallet.released * 1_000_000_000, currentTime);
-    const claimable = vestedAmount - (wallet.released * 1_000_000_000);
+    const vestedAmount = linear_vested_amount(
+      wallet.start,
+      wallet.duration * (24 * 60 * 60 * 1000),
+      wallet.balance * 1_000_000_000,
+      wallet.released * 1_000_000_000,
+      currentTime
+    );
+    const claimable = vestedAmount - wallet.released * 1_000_000_000;
+
+    // If the immediate transfer time has passed and it hasn't been claimed yet
+    if (currentTime >= wallet.immediate_transfer_time && !wallet.immediate_transfer_claimed) {
+      return Math.max(claimable, wallet.balance) / 1_000_000_000;
+    }
 
     return Math.max(claimable, 0) / 1_000_000_000;
   };
@@ -190,6 +205,43 @@ const Claim: React.FC = () => {
       const errorMessage = (error as Error).message || "Transaction failed";
       toast.error(errorMessage);
       console.error("Failed to claim vested amount:", error);
+    }
+  };
+
+  const claimImmediateTransfer = async (walletId: string, walletType: string) => {
+    try {
+      toast.info("Claiming immediate transfer amount...");
+      const txBlock = new TransactionBlock();
+      txBlock.setGasBudget(10000000);
+      txBlock.moveCall({
+        target: `${seedifyProtocolAddress}::seedifyprotocol::entry_claim_immediate_transfer`,
+        arguments: [
+          txBlock.object(walletId),
+          txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock object ID
+        ],
+        typeArguments: [walletType],
+      });
+
+      const result = await signAndExecuteTransactionBlock.mutateAsync({
+        transactionBlock: txBlock,
+        options: {
+          showObjectChanges: true,
+          showEffects: true,
+        },
+        requestType: "WaitForLocalExecution",
+      });
+
+      if (result.effects && result.effects.status && result.effects.status.status === "failure") {
+        const errorMessage = result.effects.status.error || "Transaction failed";
+        toast.error(errorMessage);
+      } else {
+        toast.success("Immediate transfer claimed successfully.");
+        fetchVestingStatus();
+      }
+    } catch (error) {
+      const errorMessage = (error as Error).message || "Transaction failed";
+      toast.error(errorMessage);
+      console.error("Failed to claim immediate transfer:", error);
     }
   };
 
@@ -310,13 +362,26 @@ const Claim: React.FC = () => {
                               <TableCell>{wallet.last_claimed ? new Date(wallet.last_claimed).toLocaleString() : 'N/A'}</TableCell>
                               <TableCell>
                                 <div className="flex space-x-2">
+                                  {/* Regular Claim Button */}
                                   <button
-                                    className={`bg-green-400 text-black px-4 py-2 rounded  ${claimableAmount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`bg-green-400 text-black px-4 py-2 rounded ${claimableAmount === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     onClick={() => claimVestedAmount(wallet.id.id, wallet.walletType)}
                                     disabled={claimableAmount === 0}
                                   >
                                     Claim Now
                                   </button>
+
+                                  {/* Immediate Transfer Claim Button */}
+                                  {wallet.immediate_transfer_time && !wallet.immediate_transfer_claimed && Date.now() >= wallet.immediate_transfer_time && (
+                                    <button
+                                      className="bg-blue-400 text-black px-4 py-2 rounded"
+                                      onClick={() => claimImmediateTransfer(wallet.id.id, wallet.walletType)}
+                                    >
+                                      Claim Immediate Transfer
+                                    </button>
+                                  )}
+
+                                  {/* Renounce Ownership Button */}
                                   <button
                                     className="bg-red-400 text-black px-4 py-2 rounded"
                                     onClick={() => renounceOwnership(wallet.id.id, wallet.walletType)}

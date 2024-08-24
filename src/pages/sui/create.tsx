@@ -357,12 +357,10 @@ const Create: React.FC = () => {
 			return;
 		}
 	
-		let successfulTransactions = 0;
-	
 		for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
 			const batch = csvData.slice(i, i + BATCH_SIZE);
 			const txBlock = new TransactionBlock();
-			txBlock.setGasBudget(200000000); // Adjust gas budget as needed
+			txBlock.setGasBudget(200000000); // Increase gas budget
 	
 			batch.forEach((entry) => {
 				const { receiverAddress, amount } = entry;
@@ -396,16 +394,8 @@ const Create: React.FC = () => {
 					},
 					requestType: "WaitForLocalExecution",
 				});
-	
-				if (result && result.effects && result.effects.status.toString() === "success") {
-					successfulTransactions += batch.length;
-					setDigest(result.digest);
-					toast.success(`Batch processed successfully: ${successfulTransactions} transactions in total.`);
-				} else {
-					console.error("Failed to process batch. Result:", result);
-					toast.error("Transaction failed. See console for details.");
-					break; // Exit the loop if a batch fails
-				}
+				setDigest(result.digest);
+				toast.success(`Transaction successful! Processed ${batch.length} locks in this batch.`);
 			} catch (e: unknown) {
 				if (e instanceof Error && e.message.includes("User rejected the request")) {
 					toast.error("Transaction rejected by user.");
@@ -413,16 +403,11 @@ const Create: React.FC = () => {
 				} else {
 					toast.error("Transaction failed. Please try again.");
 					console.error("Transaction error:", e);
-					break; // Exit the loop if an error occurs
+					return;
 				}
 			}
 		}
-	
-		if (successfulTransactions === 0) {
-			toast.error("No valid transactions processed.");
-		}
 	};
-	
 	
 	
 

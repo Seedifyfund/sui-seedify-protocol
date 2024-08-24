@@ -314,25 +314,22 @@ const Create: React.FC = () => {
 			return;
 		}
 	
-		// Convert start date and time to timestamp
+		// Convert date and time to timestamp
 		const [startHour, startMinute, startPeriod] = startTime.split(/[: ]/);
 		const startHour24 = convertTo24HourFormat(parseInt(startHour, 10), startPeriod as "AM" | "PM");
 		startDate.setHours(startHour24, parseInt(startMinute, 10), 0, 0);
 		const startTimeMsBigInt = BigInt(startDate.getTime());
 	
-		// Convert renouncement start date and time to timestamp
 		const [renouncementStartHour, renouncementStartMinute, renouncementStartPeriod] = renouncementStartTime.split(/[: ]/);
 		const renouncementStartHour24 = convertTo24HourFormat(parseInt(renouncementStartHour, 10), renouncementStartPeriod as "AM" | "PM");
 		renouncementStart.setHours(renouncementStartHour24, parseInt(renouncementStartMinute, 10), 0, 0);
 		const renouncementStartMs = BigInt(renouncementStart.getTime());
 	
-		// Convert renouncement end date and time to timestamp
 		const [renouncementEndHour, renouncementEndMinute, renouncementEndPeriod] = renouncementEndTime.split(/[: ]/);
 		const renouncementEndHour24 = convertTo24HourFormat(parseInt(renouncementEndHour, 10), renouncementEndPeriod as "AM" | "PM");
 		renouncementEnd.setHours(renouncementEndHour24, parseInt(renouncementEndMinute, 10), 0, 0);
 		const renouncementEndMs = BigInt(renouncementEnd.getTime());
 	
-		// Convert immediate claim start date and time to timestamp
 		const [immediateClaimStartHour, immediateClaimStartMinute, immediateClaimStartPeriod] = immediateClaimStartTime.split(/[: ]/);
 		const immediateClaimStartHour24 = convertTo24HourFormat(parseInt(immediateClaimStartHour, 10), immediateClaimStartPeriod as "AM" | "PM");
 		immediateClaimStart.setHours(immediateClaimStartHour24, parseInt(immediateClaimStartMinute, 10), 0, 0);
@@ -360,105 +357,34 @@ const Create: React.FC = () => {
 			return;
 		}
 	
-		let transactionsAdded = 0;
-		let isRejected = false;
+		let successfulTransactions = 0;
 	
-		if (csvData.length > 0) {
-			for (let i = 0; i < csvData.length && !isRejected; i += BATCH_SIZE) {
-				const batch = csvData.slice(i, i + BATCH_SIZE);
-				const txBlock = new TransactionBlock();
-				txBlock.setGasBudget(100000000);
-	
-				for (const entry of batch) {
-					const { receiverAddress, amount } = entry;
-					const scaledAmount = BigInt(Math.floor(amount * Math.pow(10, selectedCoinDecimals)));
-	
-					txBlock.moveCall({
-						target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
-						arguments: [
-							txBlock.object(selectedCoin),
-							txBlock.pure(scaledAmount, "u64"),
-							txBlock.pure(transferPercentage, "u64"),
-							txBlock.pure(immediateClaimStartMsBigInt, "u64"),
-							txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
-							txBlock.pure(startTimeMsBigInt, "u64"),
-							txBlock.pure(scaledDuration, "u64"),
-							txBlock.pure(scaledClaimInterval, "u64"),
-							txBlock.pure(renouncementStartMs, "u64"),
-							txBlock.pure(renouncementEndMs, "u64"),
-							txBlock.pure(receiverAddress, "address"),
-						],
-						typeArguments: [selectedCoinType],
-					});
-				}
-	
-				try {
-					const result = await signAndExecuteTransactionBlock.mutateAsync({
-						transactionBlock: txBlock,
-						options: {
-							showObjectChanges: true,
-							showEffects: true,
-						},
-						requestType: "WaitForLocalExecution",
-					});
-					setDigest(result.digest);
-					toast.success(`Transaction successful! Processed ${batch.length} locks in this batch.`);
-	
-					try {
-						const response = await axios.post(
-							`${api}/vesting/createVesting`,
-							{
-								...data,
-								digest: result.digest,
-								csvData: batch,
-							},
-							{
-								headers: {
-									"Content-Type": "application/json",
-								},
-							}
-						);
-	
-						if (response.status === 200) {
-							toast.success(`Batch of ${batch.length} locks successfully recorded in the database.`);
-						} else {
-							toast.warn("Transaction successful, but failed to record batch in database. Please contact support.");
-						}
-					} catch (apiError) {
-						toast.warn("Transaction successful, but failed to record batch in database. Please contact support.");
-					}
-				} catch (e: unknown) {
-					if (e instanceof Error && e.message.includes("User rejected the request")) {
-						toast.error("Transaction rejected by user.");
-						isRejected = true;
-						break;
-					} else {
-						toast.error("Transaction failed. Please try again.");
-						break;  // Stop further transactions if one fails
-					}
-				}
-			}
-		} else if (data.receiver && data.amount) {
-			const scaledAmount = BigInt(Math.floor(data.amount * Math.pow(10, selectedCoinDecimals)));
+		for (let i = 0; i < csvData.length; i += BATCH_SIZE) {
+			const batch = csvData.slice(i, i + BATCH_SIZE);
 			const txBlock = new TransactionBlock();
-			txBlock.setGasBudget(100000000);
+			txBlock.setGasBudget(200000000); // Adjust gas budget as needed
 	
-			txBlock.moveCall({
-				target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
-				arguments: [
-					txBlock.object(selectedCoin),
-					txBlock.pure(scaledAmount, "u64"),
-					txBlock.pure(transferPercentage, "u64"),
-					txBlock.pure(immediateClaimStartMsBigInt, "u64"),
-					txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
-					txBlock.pure(startTimeMsBigInt, "u64"),
-					txBlock.pure(scaledDuration, "u64"),
-					txBlock.pure(scaledClaimInterval, "u64"),
-					txBlock.pure(renouncementStartMs, "u64"),
-					txBlock.pure(renouncementEndMs, "u64"),
-					txBlock.pure(data.receiver, "address"),
-				],
-				typeArguments: [selectedCoinType],
+			batch.forEach((entry) => {
+				const { receiverAddress, amount } = entry;
+				const scaledAmount = BigInt(Math.floor(amount * Math.pow(10, selectedCoinDecimals)));
+	
+				txBlock.moveCall({
+					target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
+					arguments: [
+						txBlock.object(selectedCoin),
+						txBlock.pure(scaledAmount, "u64"),
+						txBlock.pure(transferPercentage, "u64"),
+						txBlock.pure(immediateClaimStartMsBigInt, "u64"),
+						txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
+						txBlock.pure(startTimeMsBigInt, "u64"),
+						txBlock.pure(scaledDuration, "u64"),
+						txBlock.pure(scaledClaimInterval, "u64"),
+						txBlock.pure(renouncementStartMs, "u64"),
+						txBlock.pure(renouncementEndMs, "u64"),
+						txBlock.pure(receiverAddress, "address"),
+					],
+					typeArguments: [selectedCoinType],
+				});
 			});
 	
 			try {
@@ -470,49 +396,30 @@ const Create: React.FC = () => {
 					},
 					requestType: "WaitForLocalExecution",
 				});
-				setDigest(result.digest);
-				toast.success(`Transaction successful! Processed single lock for receiver.`);
 	
-				try {
-					const response = await axios.post(
-						`${api}/vesting/createVesting`,
-						{
-							...data,
-							digest: result.digest,
-						},
-						{
-							headers: {
-								"Content-Type": "application/json",
-							},
-						}
-					);
-	
-					if (response.status === 200) {
-						toast.success("Lock successfully recorded in the database.");
-					} else {
-						toast.warn("Transaction successful, but failed to record in database. Please contact support.");
-					}
-				} catch (apiError) {
-					toast.warn("Transaction successful, but failed to record in database. Please contact support.");
+				if (result && result.effects && result.effects.status.toString() === "success") {
+					successfulTransactions += batch.length;
+					setDigest(result.digest);
+					toast.success(`Batch processed successfully: ${successfulTransactions} transactions in total.`);
+				} else {
+					console.error("Failed to process batch. Result:", result);
+					toast.error("Transaction failed. See console for details.");
+					break; // Exit the loop if a batch fails
 				}
 			} catch (e: unknown) {
 				if (e instanceof Error && e.message.includes("User rejected the request")) {
 					toast.error("Transaction rejected by user.");
-					return;
+					break;
 				} else {
 					toast.error("Transaction failed. Please try again.");
-					return;
+					console.error("Transaction error:", e);
+					break; // Exit the loop if an error occurs
 				}
 			}
-	
-			transactionsAdded = 1;
-		} else {
-			toast.error("No valid receiver and amount provided, and no valid CSV data found");
-			return;
 		}
 	
-		if (transactionsAdded === 0) {
-			toast.error("No valid transactions to process");
+		if (successfulTransactions === 0) {
+			toast.error("No valid transactions processed.");
 		}
 	};
 	

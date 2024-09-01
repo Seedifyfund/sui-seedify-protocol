@@ -139,6 +139,7 @@ const Create: React.FC = () => {
 	const [csvData, setCsvData] = useState<CsvData[]>([]);
 	const [isCollapsed, setIsCollapsed] = useState(false);
 	const [isRejected, setIsRejected] = useState(false);
+	const ADMIN_CAP_OBJECT_ID = "0x4ebd1e4a66c227d1f9c65c9a4de79b0557b6624bcaef8cf717d0b5ef6b6ee95d";
 
 	const { network } = useNetwork();
 	const client = new SuiClient({ url: getFullnodeUrl(network) });
@@ -292,6 +293,12 @@ const Create: React.FC = () => {
 			toast.error("Please connect the wallet first");
 			return;
 		}
+
+		if (!ADMIN_CAP_OBJECT_ID) {
+			toast.error("AdminCap not found. Please ensure you have the correct AdminCap object.");
+			return;
+		}
+	
 	
 		const {
 			startDate,
@@ -369,7 +376,9 @@ const Create: React.FC = () => {
 				txBlock.moveCall({
 					target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
 					arguments: [
+						txBlock.object(ADMIN_CAP_OBJECT_ID),
 						txBlock.object(selectedCoin),
+						
 						txBlock.pure(scaledAmount, "u64"),
 						txBlock.pure(transferPercentage, "u64"),
 						txBlock.pure(immediateClaimStartMsBigInt, "u64"),

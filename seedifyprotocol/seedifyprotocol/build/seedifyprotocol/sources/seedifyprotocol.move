@@ -15,18 +15,24 @@ module seedifyprotocol::seedifyprotocol {
 
 
     // === Structs ===
-    public struct Wallet<phantom T> has key, store {
+   public struct Wallet<phantom T> has key, store {
     id: UID,
     balance: Balance<T>,
+    immediate_transfer_balance: Balance<T>, // Store the immediate transfer amount
     start: u64,
     released: u64,
     duration: u64,
     claim_interval: u64,
     last_claimed: u64,
-    renouncement_start: u64,  // Start time for renouncement period
-    renouncement_end: u64,    // End time for renouncement period
-    claim_renounced: bool,    // Flag for renouncing claim
+    renouncement_start: u64,
+    renouncement_end: u64,
+    claim_renounced: bool,
+    immediate_transfer_claimed: bool, // Track whether the immediate transfer has been claimed
+    immediate_claim_start: u64,       // The start date when the immediate transfer can be claimed
+    admin: address,
 }
+
+
 
 
     // === Struct to Store Admin Info ===
@@ -46,30 +52,41 @@ module seedifyprotocol::seedifyprotocol {
     public fun new<T>(
     token: &mut Coin<T>,
     vesting_amount: u64,
+    immediate_transfer_amount: u64, // Immediate transfer amount
+    immediate_claim_start: u64,     // The start date when immediate transfer can be claimed
     c: &Clock,
     start: u64,
     duration: u64,
     claim_interval: u64,
-    renouncement_start: u64,  // New parameter
-    renouncement_end: u64,    // New parameter
+    renouncement_start: u64,
+    renouncement_end: u64,
+    admin: address,
     ctx: &mut TxContext
 ): Wallet<T> {
     assert!(start >= clock::timestamp_ms(c), EInvalidStartDate);
-    assert!(coin::value(token) >= vesting_amount, EInsufficientFunds);
+    assert!(coin::value(token) >= vesting_amount + immediate_transfer_amount, EInsufficientFunds);
+    
     let split_token = coin::split(token, vesting_amount, ctx);
+    let immediate_transfer_split = coin::split(token, immediate_transfer_amount, ctx); // Split the immediate transfer amount
+    
     Wallet {
         id: object::new(ctx),
         balance: coin::into_balance(split_token),
+        immediate_transfer_balance: coin::into_balance(immediate_transfer_split), // Store in wallet
         released: 0,
         start,
         duration,
         claim_interval,
         last_claimed: start,
-        renouncement_start,  // Initialize field
-        renouncement_end,    // Initialize field
+        renouncement_start,
+        renouncement_end,
         claim_renounced: false,
+        immediate_transfer_claimed: false, // Initially not claimed
+        immediate_claim_start, // Set the start date for immediate claim
+        admin,
     }
 }
+
 
 // In entry_new, pass renouncement_start and renouncement_end to the new function
 
@@ -78,12 +95,13 @@ module seedifyprotocol::seedifyprotocol {
     token: &mut Coin<T>,
     total_amount: u64,
     immediate_percentage: u64,
+    immediate_claim_start: u64, // Immediate claim start date
     c: &Clock,
     start: u64,
     duration: u64,
     claim_interval: u64,
-    renouncement_start: u64,   // Add renouncement_start parameter
-    renouncement_end: u64,     // Add renouncement_end parameter
+    renouncement_start: u64,
+    renouncement_end: u64,
     receiver: address,
     ctx: &mut TxContext
 ) {
@@ -91,23 +109,23 @@ module seedifyprotocol::seedifyprotocol {
     let immediate_amount = (total_amount * immediate_percentage) / 100;
     let vesting_amount = total_amount - immediate_amount;
 
-    assert!(coin::value(token) >= total_amount, EInsufficientFunds);
-    let immediate_coin = coin::split(token, immediate_amount, ctx);
-    transfer::public_transfer(immediate_coin, receiver);
-
     let wallet = new(
         token,
         vesting_amount,
+        immediate_amount, // Pass the immediate transfer amount
+        immediate_claim_start, // Pass the immediate claim start date
         c,
         start,
         duration,
         claim_interval,
-        renouncement_start,   // Pass renouncement_start
-        renouncement_end,     // Pass renouncement_end
+        renouncement_start,
+        renouncement_end,
+        tx_context::sender(ctx), // Admin address
         ctx
     );
     transfer::public_transfer(wallet, receiver);
 }
+
 
 
     public fun vesting_status<T>(self: &Wallet<T>, c: &Clock): u64 {
@@ -120,6 +138,23 @@ module seedifyprotocol::seedifyprotocol {
             clock::timestamp_ms(c)
         ) - self.released
     }
+
+    entry fun claim_immediate_transfer<T>(
+    self: &mut Wallet<T>,
+    c: &Clock,
+    ctx: &mut TxContext
+) {
+    assert!(!self.immediate_transfer_claimed, EAlreadyClaimed); // Ensure not already claimed
+    assert!(clock::timestamp_ms(c) >= self.immediate_claim_start, EInvalidClaimTime); // Ensure the claim date is reached
+
+    let immediate_transfer_value = balance::value(&self.immediate_transfer_balance);
+    let immediate_transfer_coin = coin::from_balance(balance::split(&mut self.immediate_transfer_balance, immediate_transfer_value), ctx);
+    
+    self.immediate_transfer_claimed = true; // Mark as claimed
+    transfer::public_transfer(immediate_transfer_coin, tx_context::sender(ctx));
+}
+
+
 
     public fun claim<T>(self: &mut Wallet<T>, c: &Clock, ctx: &mut TxContext): Coin<T> {
         assert!(!self.claim_renounced, EClaimRenounced); // Prevent claiming if renounced
@@ -141,24 +176,32 @@ module seedifyprotocol::seedifyprotocol {
         transfer::public_transfer(claimed_coin, tx_context::sender(ctx));
     }
 
-    entry fun renounce_claim<T>(
+  entry fun renounce_claim<T>(
     mut self: Wallet<T>,
-    admin: address,
-    c: &Clock,              // Include Clock to check current time
+    c: &Clock,              
     ctx: &mut TxContext
 ) {
     let current_time = clock::timestamp_ms(c);
+
+    assert!(current_time >= self.renouncement_start, 100);
+    assert!(current_time <= self.renouncement_end, 101);   
+    
     assert!(current_time >= self.renouncement_start && current_time <= self.renouncement_end, ERenouncementPeriodOver);
-    assert!(self.released == 0, EAlreadyClaimed); // Prevent renouncing if any amount is already claimed
+    assert!(self.released == 0 && !self.immediate_transfer_claimed, EAlreadyClaimed);
+    
+    let balance_value = balance::value(&self.balance);
+    let immediate_transfer_value = balance::value(&self.immediate_transfer_balance);
+    
+    let claimed_coin = coin::from_balance(balance::split(&mut self.balance, balance_value), ctx);
+    let immediate_transfer_coin = coin::from_balance(balance::split(&mut self.immediate_transfer_balance, immediate_transfer_value), ctx);
+    
+    transfer::public_transfer(claimed_coin, self.admin);
+    transfer::public_transfer(immediate_transfer_coin, self.admin);
 
-    // Transfer the remaining balance to the admin
-    let remaining_balance = balance::value(&self.balance);
-    let claimed_coin = coin::from_balance(balance::split(&mut self.balance, remaining_balance), ctx);
-    transfer::public_transfer(claimed_coin, admin);
-
-    // Destroy the wallet object by passing the ownership to destroy_zero
     destroy_zero(self);
 }
+
+
 
 
 
@@ -180,10 +223,12 @@ module seedifyprotocol::seedifyprotocol {
     }
 
     public fun destroy_zero<T>(self: Wallet<T>) {
-        let Wallet { id, balance, .. } = self;
-        object::delete(id);
-        balance::destroy_zero(balance);
-    }
+    let Wallet { id, balance, immediate_transfer_balance, .. } = self;
+    object::delete(id);
+    balance::destroy_zero(balance);
+    balance::destroy_zero(immediate_transfer_balance);
+}
+
 
     entry fun entry_destroy_zero<T>(self: Wallet<T>) {
         destroy_zero(self);

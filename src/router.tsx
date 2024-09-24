@@ -18,6 +18,12 @@ const router = createBrowserRouter([
     }),
   },
   {
+    path: '/pauseunpause',
+    lazy: async () => ({
+      Component: (await import('./pages/sui/pauseunpause')).default,
+    }),
+  },
+  {
     path: 'Create Vesting',
     lazy: async () => ({
       Component: (await import('@/components/coming-soon')).default,

@@ -175,6 +175,7 @@ const Claim: React.FC = () => {
         target: `${seedifyProtocolAddress}::seedifyprotocol::entry_claim`,
         arguments: [
           txBlock.object(walletId),
+          txBlock.object("0xe70493fe1b9eb120b1b4f91b3ff33f66f14616ffe1611099a5b336cf5f407acb"),
           txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock object ID
         ],
         typeArguments: [walletType],
@@ -212,6 +213,7 @@ const Claim: React.FC = () => {
         target: `${seedifyProtocolAddress}::seedifyprotocol::claim_immediate_transfer`,
         arguments: [
           txBlock.object(walletId),
+          txBlock.object("0xe70493fe1b9eb120b1b4f91b3ff33f66f14616ffe1611099a5b336cf5f407acb"),
           txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock object ID
         ],
         typeArguments: [walletType],

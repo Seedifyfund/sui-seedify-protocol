@@ -25,17 +25,24 @@ export const sidelinks: SideLink[] = [
     icon: <IconLayoutDashboard size={18} />,
   },
   {
+    title: 'Claim Coins',
+    label: '',
+    href: '/claim',
+    icon: <IconChecklist size={18} />,
+  },
+  {
     title: 'Create Vesting',
     label: '',
     href: '/create',
     icon: <IconChecklist size={18} />,
   },
   {
-    title: 'Claim Coins',
+    title: 'Contracts Management',
     label: '',
-    href: '/claim',
+    href: '/pauseunpause',
     icon: <IconChecklist size={18} />,
   },
+  
   // {
   //   title: 'All Vestings',
   //   label: '',

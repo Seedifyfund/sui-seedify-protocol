@@ -46,7 +46,7 @@ export default function Navbar() {
       </Sheet>
       <a className="mr-6 hidden lg:flex" href="#">
         <MountainIcon className="h-6 w-6" />
-        <span className="sr-only">Acme Inc</span>
+        <span className="sr-only">Seedify Inc</span>
       </a>
       <nav className="ml-auto hidden lg:flex gap-6">
         <a

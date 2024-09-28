@@ -317,8 +317,7 @@ const Create: React.FC = () => {
 		  renouncementEndTime,
 		  immediateClaimStart,
 		  immediateClaimStartTime,
-		  receiver,
-		  amount = 0, // Provide a default value for amount
+		  coin,
 		} = data;
 	  
 		if (!startDate || !renouncementStart || !renouncementEnd || !immediateClaimStart) {
@@ -330,25 +329,10 @@ const Create: React.FC = () => {
 		console.log("Converting dates and times to timestamps");
 		
 		// Convert date and time to timestamp
-		const [startHour, startMinute, startPeriod] = startTime.split(/[: ]/);
-		const startHour24 = convertTo24HourFormat(parseInt(startHour, 10), startPeriod as "AM" | "PM");
-		startDate.setHours(startHour24, parseInt(startMinute, 10), 0, 0);
-		const startTimeMsBigInt = BigInt(startDate.getTime());
-	  
-		const [renouncementStartHour, renouncementStartMinute, renouncementStartPeriod] = renouncementStartTime.split(/[: ]/);
-		const renouncementStartHour24 = convertTo24HourFormat(parseInt(renouncementStartHour, 10), renouncementStartPeriod as "AM" | "PM");
-		renouncementStart.setHours(renouncementStartHour24, parseInt(renouncementStartMinute, 10), 0, 0);
-		const renouncementStartMs = BigInt(renouncementStart.getTime());
-	  
-		const [renouncementEndHour, renouncementEndMinute, renouncementEndPeriod] = renouncementEndTime.split(/[: ]/);
-		const renouncementEndHour24 = convertTo24HourFormat(parseInt(renouncementEndHour, 10), renouncementEndPeriod as "AM" | "PM");
-		renouncementEnd.setHours(renouncementEndHour24, parseInt(renouncementEndMinute, 10), 0, 0);
-		const renouncementEndMs = BigInt(renouncementEnd.getTime());
-	  
-		const [immediateClaimStartHour, immediateClaimStartMinute, immediateClaimStartPeriod] = immediateClaimStartTime.split(/[: ]/);
-		const immediateClaimStartHour24 = convertTo24HourFormat(parseInt(immediateClaimStartHour, 10), immediateClaimStartPeriod as "AM" | "PM");
-		immediateClaimStart.setHours(immediateClaimStartHour24, parseInt(immediateClaimStartMinute, 10), 0, 0);
-		const immediateClaimStartMsBigInt = BigInt(immediateClaimStart.getTime());
+		const startTimeMsBigInt = BigInt(convertDateTimeToTimestamp(startDate, startTime));
+		const renouncementStartMs = BigInt(convertDateTimeToTimestamp(renouncementStart, renouncementStartTime));
+		const renouncementEndMs = BigInt(convertDateTimeToTimestamp(renouncementEnd, renouncementEndTime));
+		const immediateClaimStartMsBigInt = BigInt(convertDateTimeToTimestamp(immediateClaimStart, immediateClaimStartTime));
 	  
 		if (startTimeMsBigInt < BigInt(Date.now())) {
 		  console.log("Start time is in the past");
@@ -360,16 +344,9 @@ const Create: React.FC = () => {
 		const scaledDuration = BigInt(convertToMilliseconds(duration, durationUnit));
 		const scaledClaimInterval = BigInt(convertToMilliseconds(claimInterval, claimIntervalUnit));
 	  
-		console.log("Fetching gas coin details");
-		const gasCoinDetails = await fetchCoinDetails(selectedCoin);
-		if (!gasCoinDetails || !gasCoinDetails.objectId || !gasCoinDetails.version || !gasCoinDetails.digest) {
-		  console.log("Invalid gas coin data:", gasCoinDetails);
-		  toast.error("Invalid gas coin data");
-		  return;
-		}
-	  
-		const selectedCoinType = coins.find((c) => c.coinObjectId === selectedCoin)?.coinType;
-		const selectedCoinDecimals = coins.find((c) => c.coinObjectId === selectedCoin)?.decimals;
+		console.log("Fetching coin details");
+		const selectedCoinType = coins.find((c) => c.coinObjectId === coin)?.coinType;
+		const selectedCoinDecimals = coins.find((c) => c.coinObjectId === coin)?.decimals;
 	  
 		if (!selectedCoinType || selectedCoinDecimals === undefined) {
 		  console.log("Selected coin type or decimals not found");
@@ -377,67 +354,35 @@ const Create: React.FC = () => {
 		  return;
 		}
 	  
-		console.log("Creating TransactionBlock");
-		const txBlock = new TransactionBlock();
-		console.log("Setting gas budget");
-		txBlock.setGasBudget(200000000);
-	  
-		console.log("Scaling amount based on coin decimals");
-		const scaledAmount = BigInt(Math.floor(amount * Math.pow(10, selectedCoinDecimals)));
-	  
 		try {
-		  console.log("Creating moveCall with arguments:", {
-			target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
-			arguments: [
-			  txBlock.object(ADMIN_CAP_OBJECT_ID),
-			  txBlock.object(selectedCoin),
-			  txBlock.pure(scaledAmount, "u64"),
-			  txBlock.pure(transferPercentage, "u64"),
-			  txBlock.pure(immediateClaimStartMsBigInt, "u64"),
-			  txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
-			  txBlock.pure(startTimeMsBigInt, "u64"),
-			  txBlock.pure(scaledDuration, "u64"),
-			  txBlock.pure(scaledClaimInterval, "u64"),
-			  txBlock.pure(renouncementStartMs, "u64"),
-			  txBlock.pure(renouncementEndMs, "u64"),
-			  txBlock.pure(receiver, "address"),
-			],
-			typeArguments: [selectedCoinType],
-		  });
-	  
-		  txBlock.moveCall({
-			target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
-			arguments: [
-			  txBlock.object(ADMIN_CAP_OBJECT_ID),
-			  txBlock.object(selectedCoin),
-			  txBlock.pure(scaledAmount, "u64"),
-			  txBlock.pure(transferPercentage, "u64"),
-			  txBlock.pure(immediateClaimStartMsBigInt, "u64"),
-			  txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
-			  txBlock.pure(startTimeMsBigInt, "u64"),
-			  txBlock.pure(scaledDuration, "u64"),
-			  txBlock.pure(scaledClaimInterval, "u64"),
-			  txBlock.pure(renouncementStartMs, "u64"),
-			  txBlock.pure(renouncementEndMs, "u64"),
-			  txBlock.pure(receiver, "address"),
-			],
-			typeArguments: [selectedCoinType],
-		  });
-	  
-		  console.log("moveCall created, executing transaction");
-	  
-		  const result = await signAndExecuteTransactionBlock.mutateAsync({
-			transactionBlock: txBlock,
-			options: {
-			  showObjectChanges: true,
-			  showEffects: true,
-			},
-			requestType: "WaitForLocalExecution",
-		  });
-	  
-		  console.log("Transaction executed successfully:", result);
-		  setDigest(result.digest);
-		  toast.success(`Transaction successful! Vesting created for ${receiver}`);
+		  if (csvData.length > 0) {
+			// Batch creation using CSV data
+			await createBatchVestings(
+			  selectedCoinType,
+			  selectedCoinDecimals,
+			  startTimeMsBigInt,
+			  scaledDuration,
+			  scaledClaimInterval,
+			  transferPercentage,
+			  renouncementStartMs,
+			  renouncementEndMs,
+			  immediateClaimStartMsBigInt
+			);
+		  } else {
+			// Single vesting creation
+			await createSingleVesting(
+			  data,
+			  selectedCoinType,
+			  selectedCoinDecimals,
+			  startTimeMsBigInt,
+			  scaledDuration,
+			  scaledClaimInterval,
+			  transferPercentage,
+			  renouncementStartMs,
+			  renouncementEndMs,
+			  immediateClaimStartMsBigInt
+			);
+		  }
 		} catch (e: unknown) {
 		  console.error("Transaction error:", e);
 		  if (e instanceof Error) {
@@ -450,6 +395,120 @@ const Create: React.FC = () => {
 			toast.error("Transaction failed for unknown reason");
 		  }
 		}
+	  };
+	  
+	  const createSingleVesting = async (
+		data: FormData,
+		selectedCoinType: string,
+		selectedCoinDecimals: number,
+		startTimeMsBigInt: bigint,
+		scaledDuration: bigint,
+		scaledClaimInterval: bigint,
+		transferPercentage: number,
+		renouncementStartMs: bigint,
+		renouncementEndMs: bigint,
+		immediateClaimStartMsBigInt: bigint
+	  ) => {
+		const { receiver, amount = 0, coin } = data;
+		const scaledAmount = BigInt(Math.floor(amount * Math.pow(10, selectedCoinDecimals)));
+	  
+		const txBlock = new TransactionBlock();
+		txBlock.setGasBudget(200000000);
+	  
+		txBlock.moveCall({
+		  target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
+		  arguments: [
+			txBlock.object(ADMIN_CAP_OBJECT_ID),
+			txBlock.object(coin),
+			txBlock.pure(scaledAmount, "u64"),
+			txBlock.pure(transferPercentage, "u64"),
+			txBlock.pure(immediateClaimStartMsBigInt, "u64"),
+			txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
+			txBlock.pure(startTimeMsBigInt, "u64"),
+			txBlock.pure(scaledDuration, "u64"),
+			txBlock.pure(scaledClaimInterval, "u64"),
+			txBlock.pure(renouncementStartMs, "u64"),
+			txBlock.pure(renouncementEndMs, "u64"),
+			txBlock.pure(receiver, "address"),
+		  ],
+		  typeArguments: [selectedCoinType],
+		});
+	  
+		const result = await signAndExecuteTransactionBlock.mutateAsync({
+		  transactionBlock: txBlock,
+		  options: {
+			showObjectChanges: true,
+			showEffects: true,
+		  },
+		  requestType: "WaitForLocalExecution",
+		});
+	  
+		console.log("Transaction executed successfully:", result);
+		setDigest(result.digest);
+		toast.success(`Vesting created successfully for ${receiver}`);
+	  };
+	  
+	  const createBatchVestings = async (
+		selectedCoinType: string,
+		selectedCoinDecimals: number,
+		startTimeMsBigInt: bigint,
+		scaledDuration: bigint,
+		scaledClaimInterval: bigint,
+		transferPercentage: number,
+		renouncementStartMs: bigint,
+		renouncementEndMs: bigint,
+		immediateClaimStartMsBigInt: bigint
+	  ) => {
+		const batchSize = 5; // You can adjust this based on your needs
+		for (let i = 0; i < csvData.length; i += batchSize) {
+		  const batch = csvData.slice(i, i + batchSize);
+		  const txBlock = new TransactionBlock();
+		  txBlock.setGasBudget(200000000 * batch.length); // Adjust gas budget based on batch size
+	  
+		  for (const entry of batch) {
+			const scaledAmount = BigInt(Math.floor(entry.amount * Math.pow(10, selectedCoinDecimals)));
+	  
+			txBlock.moveCall({
+			  target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
+			  arguments: [
+				txBlock.object(ADMIN_CAP_OBJECT_ID),
+				txBlock.object(selectedCoin),
+				txBlock.pure(scaledAmount, "u64"),
+				txBlock.pure(transferPercentage, "u64"),
+				txBlock.pure(immediateClaimStartMsBigInt, "u64"),
+				txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"),
+				txBlock.pure(startTimeMsBigInt, "u64"),
+				txBlock.pure(scaledDuration, "u64"),
+				txBlock.pure(scaledClaimInterval, "u64"),
+				txBlock.pure(renouncementStartMs, "u64"),
+				txBlock.pure(renouncementEndMs, "u64"),
+				txBlock.pure(entry.receiverAddress, "address"),
+			  ],
+			  typeArguments: [selectedCoinType],
+			});
+		  }
+	  
+		  const result = await signAndExecuteTransactionBlock.mutateAsync({
+			transactionBlock: txBlock,
+			options: {
+			  showObjectChanges: true,
+			  showEffects: true,
+			},
+			requestType: "WaitForLocalExecution",
+		  });
+	  
+		  console.log(`Batch ${i / batchSize + 1} executed successfully:`, result);
+		  setDigest(result.digest);
+		}
+	  
+		toast.success(`Batch vesting creation completed for ${csvData.length} entries`);
+	  };
+	  
+	  const convertDateTimeToTimestamp = (date: Date, time: string): number => {
+		const [hour, minute, period] = time.split(/[: ]/);
+		const hour24 = convertTo24HourFormat(parseInt(hour, 10), period as "AM" | "PM");
+		date.setHours(hour24, parseInt(minute, 10), 0, 0);
+		return date.getTime();
 	  };
 	
 	

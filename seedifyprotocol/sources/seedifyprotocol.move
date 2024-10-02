@@ -15,9 +15,9 @@ module seedifyprotocol::seedifyprotocol {
     const EClaimRenounced: u64 = 5; // Error when trying to claim after renouncement
     const ERenouncementPeriodOver: u64 = 6; // Error for attempting to renounce outside the allowed period
     const EUnauthorized: u64 = 7; // Error for unauthorized access
-    
-    const EContractPaused: u64 = 9;
-    
+    const EContractPaused: u64 = 8;
+    const EInvalidClaimInterval: u64 = 9; // Error for invalid claim interval
+    const EInvalidRenouncementPeriod: u64 = 10; // Error for invalid renouncement period
 
 
     // === Structs ===
@@ -105,29 +105,31 @@ fun init(ctx: &mut TxContext) {
 // New function to create a new wallet 
 // Alias entry_new to new
     public fun new<T>(
-    token: &mut Coin<T>, // Token to be vested
-    vesting_amount: u64, // Vesting amount
-    immediate_transfer_amount: u64, // Immediate transfer amount
-    immediate_claim_start: u64,     // The start date when immediate transfer can be claimed
-    c: &Clock, // Clock reference for timestamp
-    start: u64, // Start date of the vesting
-    duration: u64, // Duration of the vesting
-    claim_interval: u64, // Interval between claims
-    renouncement_start: u64, // Start date for renouncement
-    renouncement_end: u64, // End date for renouncement
-    ctx: &mut TxContext // Transaction context whose sender is the admin
+    token: &mut Coin<T>,
+    vesting_amount: u64,
+    immediate_transfer_amount: u64,
+    immediate_claim_start: u64,
+    c: &Clock,
+    start: u64,
+    duration: u64,
+    claim_interval: u64,
+    renouncement_start: u64,
+    renouncement_end: u64,
+    ctx: &mut TxContext
 ): Wallet<T> {
-    assert!(start >= clock::timestamp_ms(c), EInvalidStartDate); // Ensure start date is in the future
-    assert!(coin::value(token) >= vesting_amount + immediate_transfer_amount, EInsufficientFunds); // Ensure sufficient funds in the token
+    assert!(start >= clock::timestamp_ms(c), EInvalidStartDate);
+    assert!(coin::value(token) >= vesting_amount + immediate_transfer_amount, EInsufficientFunds);
+    assert!(claim_interval <= duration, EInvalidClaimInterval);
+    assert!(renouncement_start <= renouncement_end, EInvalidRenouncementPeriod);
     
-    let split_token = coin::split(token, vesting_amount, ctx); // Split the vesting amount
-    let immediate_transfer_split = coin::split(token, immediate_transfer_amount, ctx); // Split the immediate transfer amount
-    // Create a new Wallet object
+    let split_token = coin::split(token, vesting_amount, ctx);
+    let immediate_transfer_split = coin::split(token, immediate_transfer_amount, ctx);
+    
     Wallet {
-        id: object::new(ctx), // Create a new object
-        balance: coin::into_balance(split_token), // Store in wallet
-        is_claiming_paused: false, // Initialize claiming as not paused
-        immediate_transfer_balance: coin::into_balance(immediate_transfer_split), // Store in wallet
+        id: object::new(ctx),
+        balance: coin::into_balance(split_token),
+        is_claiming_paused: false,
+        immediate_transfer_balance: coin::into_balance(immediate_transfer_split),
         released: 0,
         start,
         duration,
@@ -136,8 +138,8 @@ fun init(ctx: &mut TxContext) {
         renouncement_start,
         renouncement_end,
         claim_renounced: false,
-        immediate_transfer_claimed: false, // Initially not claimed
-        immediate_claim_start, // Set the start date for immediate claim
+        immediate_transfer_claimed: false,
+        immediate_claim_start,
     }
 }
 

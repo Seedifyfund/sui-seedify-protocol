@@ -10,7 +10,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Copy, CheckCircle } from 'lucide-react';
-import { useNetwork } from '../../../components/NetworkContext';
+import { useNetwork, getContractAddress } from '../../../components/NetworkContext';
 
 interface WalletFields {
   id: string;
@@ -25,9 +25,7 @@ export function RecentSales() {
   const [wallets, setWallets] = useState<WalletFields[]>([]);
   const [copiedWalletId, setCopiedWalletId] = useState<string | null>(null);
   
-  const seedifyProtocolAddress = network === 'mainnet'
-    ? import.meta.env.VITE_MAINNET_SEEDIFY_ADDRESS
-    : import.meta.env.VITE_TESTNET_SEEDIFY_ADDRESS;
+  const seedifyProtocolAddress = getContractAddress();
 
   const fetchVestingStatus = async () => {
     try {

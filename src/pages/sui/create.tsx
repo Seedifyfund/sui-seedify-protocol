@@ -43,9 +43,8 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import axios from "axios";
 import Sidebar2 from "../../components/sidebar";
-import { useNetwork } from '../../components/NetworkContext';
+import { getContractAddress, useNetwork } from '../../components/NetworkContext';
 import { UserNav } from '@/components/user-nav';
 import { Layout, LayoutHeader } from '@/components/custom/layout';
 
@@ -143,10 +142,8 @@ const Create: React.FC = () => {
 
 	const { network } = useNetwork();
 	const client = new SuiClient({ url: getFullnodeUrl(network) });
+	const seedifyProtocolAddress = getContractAddress();
 
-	const seedifyProtocolAddress = network === 'mainnet'
-		? import.meta.env.VITE_MAINNET_SEEDIFY_ADDRESS
-		: import.meta.env.VITE_TESTNET_SEEDIFY_ADDRESS;
 
 	useEffect(() => {
 		if (currentAccount) {

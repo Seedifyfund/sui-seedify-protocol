@@ -58,7 +58,7 @@ const formSchema = z.object({
   duration: z.preprocess((val) => Number(val), z.number().min(1)),
   durationUnit: z.enum(["minutes", "hours", "days"]),
   claimInterval: z.preprocess((val) => Number(val), z.number().min(1)),
-  claimIntervalUnit: z.enum(["minutes", "hours", "days"]),
+  claimIntervalUnit: z.enum(["seconds", "minutes", "hours", "days"]),
   receiver: z.string().min(1),
   amount: z.preprocess((val) => Number(val), z.number().min(1)).optional(),
   transferPercentage: z.preprocess(
@@ -121,7 +121,7 @@ const Create: React.FC = () => {
       duration: 30,
       durationUnit: "days",
       claimInterval: 5,
-      claimIntervalUnit: "days",
+      claimIntervalUnit: "seconds",
       receiver:
         "0xb18ead1e8c7737dd438b1a618fc4f977c1c7f3685a5cf83abd56d3cd2bf4f484", // Default value for Receiver Address
       amount: 1, // Default value for Amount
@@ -133,6 +133,7 @@ const Create: React.FC = () => {
     },
   });
 
+  const [batchSize, setBatchSize] = useState(5);
   const [digest, setDigest] = useState("");
   const [coins, setCoins] = useState<
     {
@@ -293,10 +294,6 @@ const Create: React.FC = () => {
       );
     });
   };
-
-  // Remove the duplicate declaration of BATCH_SIZE
-
-  const BATCH_SIZE = 5; // Reduced batch size for testing
 
   const onSubmit = async (data: FormData) => {
     console.log("onSubmit called with data:", data);
@@ -498,7 +495,6 @@ const Create: React.FC = () => {
     renouncementEndMs: bigint,
     immediateClaimStartMsBigInt: bigint
   ) => {
-    const batchSize = 5; // You can adjust this based on your needs
     for (let i = 0; i < csvData.length; i += batchSize) {
       const batch = csvData.slice(i, i + batchSize);
       const txBlock = new TransactionBlock();
@@ -576,6 +572,17 @@ const Create: React.FC = () => {
                 <h2 className="text-2xl font-semibold mb-4 text-center">
                   CREATE VESTING
                 </h2>
+
+                <span className="text-xs text-gray-400">
+                  Select Amount of wallets to create in a single transaction
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Enter Batch Size"
+                  className="mb-4"
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(parseInt(e.target.value, 10))}
+                />
                 <Form
                   {...formMethods}
                   handleSubmit={handleSubmit}
@@ -791,6 +798,7 @@ const Create: React.FC = () => {
                                 <SelectValue placeholder="Select interval unit" />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="seconds">Seconds</SelectItem>
                                 <SelectItem value="minutes">Minutes</SelectItem>
                                 <SelectItem value="hours">Hours</SelectItem>
                                 <SelectItem value="days">Days</SelectItem>

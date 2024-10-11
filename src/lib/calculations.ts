@@ -1,5 +1,7 @@
 export const convertToMilliseconds = (value: number, unit: string): number => {
     switch (unit) {
+      case 'seconds':
+        return value * 1000;
       case 'minutes':
         return value * 60 * 1000;
       case 'hours':

@@ -505,24 +505,29 @@ const Create: React.FC = () => {
           Math.floor(entry.amount * Math.pow(10, selectedCoinDecimals))
         );
 
+        const contract_arguments: any = [
+          txBlock.object(ADMIN_CAP_OBJECT_ID),
+          txBlock.object(selectedCoin),
+          txBlock.pure(scaledAmount, "u64"),
+          txBlock.pure(transferPercentage, "u64"),
+          txBlock.pure(immediateClaimStartMsBigInt, "u64"),
+          txBlock.object(
+            "0x0000000000000000000000000000000000000000000000000000000000000006"
+          ),
+          txBlock.pure(startTimeMsBigInt, "u64"),
+          txBlock.pure(scaledDuration, "u64"),
+          txBlock.pure(scaledClaimInterval, "u64"),
+          txBlock.pure(renouncementStartMs, "u64"),
+          txBlock.pure(renouncementEndMs, "u64"),
+          txBlock.pure(entry.receiverAddress, "address"),
+        ];
+
+        console.log("arguments: ", contract_arguments);
+        console.log("selected coin type: ", selectedCoinType);
+
         txBlock.moveCall({
           target: `${seedifyProtocolAddress}::seedifyprotocol::entry_new`,
-          arguments: [
-            txBlock.object(ADMIN_CAP_OBJECT_ID),
-            txBlock.object(selectedCoin),
-            txBlock.pure(scaledAmount, "u64"),
-            txBlock.pure(transferPercentage, "u64"),
-            txBlock.pure(immediateClaimStartMsBigInt, "u64"),
-            txBlock.object(
-              "0x0000000000000000000000000000000000000000000000000000000000000006"
-            ),
-            txBlock.pure(startTimeMsBigInt, "u64"),
-            txBlock.pure(scaledDuration, "u64"),
-            txBlock.pure(scaledClaimInterval, "u64"),
-            txBlock.pure(renouncementStartMs, "u64"),
-            txBlock.pure(renouncementEndMs, "u64"),
-            txBlock.pure(entry.receiverAddress, "address"),
-          ],
+          arguments: contract_arguments,
           typeArguments: [selectedCoinType],
         });
       }

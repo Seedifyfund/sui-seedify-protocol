@@ -1,7 +1,7 @@
 "use client";
 
 import { Copy } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui.js/client";
 import {
   useCurrentAccount,
@@ -56,6 +56,14 @@ const Claim: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const seedifyProtocolAddress = getContractAddress();
+
+  const globalStateAddress = useMemo(
+    () =>
+      network === "mainnet"
+        ? import.meta.env.VITE_MAINNET_GLOBAL_STATE_OBJECT_ID
+        : import.meta.env.VITE_TESTNET_GLOBAL_STATE_OBJECT_ID,
+    [network]
+  );
 
   const fetchVestingStatus = async () => {
     try {
@@ -203,8 +211,10 @@ const Claim: React.FC = () => {
         target: `${seedifyProtocolAddress}::seedifyprotocol::entry_claim`,
         arguments: [
           txBlock.object(walletId),
-          txBlock.object("0xe70493fe1b9eb120b1b4f91b3ff33f66f14616ffe1611099a5b336cf5f407acb"),
-          txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock object ID
+          txBlock.object(globalStateAddress),
+          txBlock.object(
+            "0x0000000000000000000000000000000000000000000000000000000000000006"
+          ), // Clock object ID
         ],
         typeArguments: [walletType],
       });
@@ -249,8 +259,10 @@ const Claim: React.FC = () => {
         target: `${seedifyProtocolAddress}::seedifyprotocol::claim_immediate_transfer`,
         arguments: [
           txBlock.object(walletId),
-          txBlock.object("0xe70493fe1b9eb120b1b4f91b3ff33f66f14616ffe1611099a5b336cf5f407acb"),
-          txBlock.object("0x0000000000000000000000000000000000000000000000000000000000000006"), // Clock object ID
+          txBlock.object(globalStateAddress),
+          txBlock.object(
+            "0x0000000000000000000000000000000000000000000000000000000000000006"
+          ), // Clock object ID
         ],
         typeArguments: [walletType],
       });
